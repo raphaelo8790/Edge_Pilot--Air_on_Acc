@@ -9,12 +9,16 @@
  */
 import { useEffect, useId, useState } from "react";
 
+import type { TaskType } from "@/modules/benchmark/core/services/TaskCompatibility";
 import {
+  getLocalRuntime,
   getProviders,
   type ApiFailure,
+  type LocalModel,
   type ProviderCatalogEntry,
   type ProvidersMeta,
 } from "./api";
+import { fitFor } from "./InstalledModels";
 import { ErrorState, LoadingState, EmptyState } from "./StateViews";
 
 export const PROVIDER_COLOR: Record<string, string> = {
@@ -31,6 +35,8 @@ const MODEL_SUGGESTIONS: Record<string, string[]> = {
 };
 
 interface Props {
+  /** Decides which installed models can run this workload. */
+  taskType: TaskType | null;
   selectedProvider: string | null;
   model: string;
   onSelect: (provider: string) => void;
@@ -40,6 +46,7 @@ interface Props {
 }
 
 export function ProviderPanel({
+  taskType,
   selectedProvider,
   model,
   onSelect,
@@ -54,6 +61,25 @@ export function ProviderPanel({
   const [loading, setLoading] = useState(true);
 
   const [reloadKey, setReloadKey] = useState(0);
+
+  // What is actually installed locally. Ollama is the only provider whose
+  // catalogue can be enumerated - a cloud vendor will not list its models over
+  // an API key - so this narrows the choice for Ollama and leaves the others
+  // as free text.
+  const [localModels, setLocalModels] = useState<LocalModel[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getLocalRuntime().then((res) => {
+      if (cancelled) return;
+      setLocalModels(res.ok && res.data.ok ? res.data.models : []);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // State updates happen only after the response arrives (never synchronously
   // inside the effect body — react-hooks/set-state-in-effect), and a cancelled
@@ -85,6 +111,16 @@ export function ProviderPanel({
 
   const selected = providers?.find((p) => p.name === selectedProvider) ?? null;
   const ready = selected !== null && model.trim().length > 0;
+
+  // Only Ollama's catalogue is knowable from here, and only once it has
+  // answered. Until then this falls back to free text rather than showing an
+  // empty list that looks like "you have no models".
+  const isLocalChoice =
+    selectedProvider === "ollama" && localModels !== null && localModels.length > 0;
+  const usableLocal = (localModels ?? []).filter(
+    (m) => fitFor(m, taskType).usable
+  );
+  const hiddenCount = (localModels ?? []).length - usableLocal.length;
 
   return (
     <section className="card" aria-labelledby={`${id}-t`}>
@@ -138,7 +174,11 @@ export function ProviderPanel({
                   disabled={!p.is_configured}
                   onChange={() => {
                     onSelect(p.name);
-                    if (!model.trim()) {
+                    // Do not pre-fill Ollama from the static list: those names
+                    // are examples from the docs, not what is installed here,
+                    // and pre-filling one the machine does not have puts a
+                    // guaranteed `invalid_model` in the box.
+                    if (!model.trim() && p.name !== "ollama") {
                       onModel(MODEL_SUGGESTIONS[p.name]?.[0] ?? "");
                     }
                   }}
@@ -184,24 +224,59 @@ export function ProviderPanel({
 
           <div className="field" style={{ marginTop: 16, maxWidth: 420 }}>
             <label htmlFor={`${id}-model`}>Model</label>
-            <p className="hint">
-              Exact model name as the provider knows it (an unknown name fails
-              the run with <code>invalid_model</code>).
-            </p>
-            <input
-              id={`${id}-model`}
-              list={`${id}-models`}
-              value={model}
-              onChange={(e) => onModel(e.target.value)}
-              placeholder="e.g. llama3.2:1b"
-            />
-            <datalist id={`${id}-models`}>
-              {(selectedProvider ? MODEL_SUGGESTIONS[selectedProvider] ?? [] : []).map(
-                (m) => (
-                  <option key={m} value={m} />
-                ),
-              )}
-            </datalist>
+            {isLocalChoice ? (
+              <>
+                <p className="hint">
+                  Installed on this machine and able to run this workload.
+                  {hiddenCount > 0
+                    ? ` ${hiddenCount} other model${hiddenCount > 1 ? "s are" : " is"} installed but cannot — see the panel below.`
+                    : ""}
+                </p>
+                <select
+                  id={`${id}-model`}
+                  value={model}
+                  onChange={(e) => onModel(e.target.value)}
+                >
+                  <option value="">Choose a model…</option>
+                  {usableLocal.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                      {m.parameter_size ? ` · ${m.parameter_size}` : ""}
+                    </option>
+                  ))}
+                </select>
+                {usableLocal.length === 0 ? (
+                  <p className="error-text">
+                    No installed model can run this workload. Pull one that can,
+                    or change the task type in step 1.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <p className="hint">
+                  Exact model name as the provider knows it (an unknown name
+                  fails the run with <code>invalid_model</code>). A cloud
+                  provider does not publish its catalogue over the API, so this
+                  cannot be narrowed the way the local list is.
+                </p>
+                <input
+                  id={`${id}-model`}
+                  list={`${id}-models`}
+                  value={model}
+                  onChange={(e) => onModel(e.target.value)}
+                  placeholder="e.g. gemini-2.5-flash"
+                />
+                <datalist id={`${id}-models`}>
+                  {(selectedProvider
+                    ? MODEL_SUGGESTIONS[selectedProvider] ?? []
+                    : []
+                  ).map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+              </>
+            )}
           </div>
 
           <div className="btn-row">

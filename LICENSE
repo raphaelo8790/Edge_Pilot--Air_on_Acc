@@ -1,3 +1,52 @@
+EdgePilot AI - licensing
+========================
+
+This repository contains two bodies of work under two different licences. Both
+apply. Read both before reusing anything from it.
+
+
+1. MY WORK - GNU Affero General Public License v3.0 or later
+------------------------------------------------------------
+
+Copyright (C) 2026 Adham Yakout
+
+This covers everything added or changed in the commit "My work: measured
+hardware fit, cold-start isolation, session ownership, device removal" and in
+every commit after it - 228 files, roughly 16,600 lines. The boundary is not a
+matter of opinion: `git diff HEAD~1 HEAD` against the first commit shows it
+exactly.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License along
+with this program. If not, see <https://www.gnu.org/licenses/>. A copy is
+included at LICENSES/AGPL-3.0.txt.
+
+What section 13 means in practice: if you run a modified version of this
+software so that other people interact with it over a network, you must offer
+those users the source of your modified version. Hosting it is not a way around
+the licence.
+
+
+2. THE IMPORTED BASELINE - MIT
+-------------------------------
+
+The first commit of this repository is an unmodified import of the upstream
+project it was built from, as it stood on 17 August 2026 (commit ec97a14). Those files were published under the MIT licence, and MIT's
+one condition is that its notice travels with copies of the software. It is
+therefore reproduced below in full, and again at LICENSES/MIT.txt.
+
+Retaining this notice is a licence obligation, not a statement about who wrote
+which line. Where authorship of particular work packages is documented, it is
+documented in docs/ and in 00-PROJECT-RECORD.md.
+
 MIT License
 
 Copyright (c) 2026 Ahmed Sleem

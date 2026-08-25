@@ -1,3 +1,6 @@
+# NOTE: absolute filesystem paths in this log were replaced with <project-root>.
+# Nothing else was altered: every command, exit code and output line is as captured.
+# Regenerate a fresh log with: npm run bench:clean-start
 ==============================================================================
 EdgePilot AI — clean-environment start, captured automatically
 ==============================================================================
@@ -29,7 +32,7 @@ platform          : linux 6.18.5 (x64)
 cpu               : Intel(R) Xeon(R) Processor @ 2.80GHz × 2
 memory            : 7.84 GB
 node              : v22.22.2
-cwd               : /home/claude/work
+cwd               : <project-root>
 ollama health url : http://localhost:11434/api/tags
 accelerator       : NOT DETECTED — state manually whether this run used a GPU
 
@@ -93,20 +96,20 @@ required : yes
 > eslint .
 
 
-/home/claude/work/eslint.config.mjs
+<project-root>/eslint.config.mjs
   4:1  warning  Assign array to a variable before exporting as module default  import/no-anonymous-default-export
 
-/home/claude/work/src/app/api/v1/devices/route.ts
+<project-root>/src/app/api/v1/devices/route.ts
   12:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
   42:27  warning  'request' is defined but never used          @typescript-eslint/no-unused-vars
   45:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
 
-/home/claude/work/src/app/api/v1/workloads/route.ts
+<project-root>/src/app/api/v1/workloads/route.ts
   12:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
   42:27  warning  'request' is defined but never used          @typescript-eslint/no-unused-vars
   45:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
 
-/home/claude/work/src/modules/benchmark/core/services/ReadinessCalculator.ts
+<project-root>/src/modules/benchmark/core/services/ReadinessCalculator.ts
   1:10  warning  'ReadinessScore' is defined but never used  @typescript-eslint/no-unused-vars
 
 ✖ 8 problems (0 errors, 8 warnings)
@@ -154,7 +157,7 @@ required : yes
 > edgepilot-ai@0.1.0 bench:evidence:failures
 > node --import tsx scripts/benchmark/capture-failure-evidence.ts
 
-Wrote /home/claude/work/evidence/benchmark/failure-modes.json
+Wrote <project-root>/evidence/benchmark/failure-modes.json
   8 classification scenarios, 8 fallback scenarios.
   All behaved as documented.
 

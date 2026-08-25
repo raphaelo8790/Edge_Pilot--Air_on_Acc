@@ -3,7 +3,6 @@ import { z } from 'zod';
 // Benchmark Request Schema
 export const BenchmarkRequestSchema = z.object({
   workload_id: z.string().uuid(),
-  device_id: z.string().uuid(),
   provider: z.enum(['ollama', 'gemini', 'groq']),
   model: z.string().min(1),
   prompt: z.string().min(1).max(10000),
@@ -16,7 +15,6 @@ export type BenchmarkRequest = z.infer<typeof BenchmarkRequestSchema>;
 export const BenchmarkResultSchema = z.object({
   benchmark_id: z.string().uuid(),
   workload_id: z.string().uuid(),
-  device_id: z.string().uuid(),
   provider: z.string(),
   model: z.string(),
   latency_ms: z.number(),
@@ -33,7 +31,6 @@ export type BenchmarkResult = z.infer<typeof BenchmarkResultSchema>;
 export const ReadinessScoreSchema = z.object({
   readiness_id: z.string().uuid(),
   workload_id: z.string().uuid(),
-  device_id: z.string().uuid(),
   hardware_fit: z.number().min(0).max(100),
   latency_score: z.number().min(0).max(100),
   privacy_score: z.number().min(0).max(100),

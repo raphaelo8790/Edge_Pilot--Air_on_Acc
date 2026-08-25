@@ -44,7 +44,10 @@ describe('BenchmarkRunner — a run that works', () => {
         provider: 'ollama',
         outcome: 'succeeded',
         error_code: null,
-        detail: '3/3 iterations succeeded.',
+        // Three, not four. The run makes an extra call and discards it; a
+        // chain entry that claimed 4/4 would be reporting work nobody asked
+        // for. See ColdStartSchema.
+        detail: '3/3 iterations succeeded, after a discarded cold start.',
       },
     ]);
   });
@@ -64,7 +67,6 @@ describe('BenchmarkRunner — a run that works', () => {
     const recomputed = new ReadinessCalculator().calculate({
       hardwareFit: outcome.readinessBreakdown!.hardwareFit,
       latencyMs: outcome.summary.latency_ms_mean ?? 0,
-      privacyLevel: 'high',
       estimatedCost: 0,
       reliabilityScore: outcome.summary.success_rate_percent,
     });
@@ -81,7 +83,9 @@ describe('BenchmarkRunner — a run that works', () => {
 
     expect(assumptions).toContain('Hardware fit');
     expect(assumptions).toContain('Cost');
-    expect(assumptions).toContain('privacy score');
+    // Privacy is no longer an assumption baked into the score. It is a class,
+    // and what could not be established about it appears in limitations.
+    expect(outcome.limitations.join('\n')).toContain('never left this machine');
     expect(outcome.evidence.join('\n')).toContain('measured');
   });
 
@@ -168,7 +172,11 @@ describe('BenchmarkRunner — falling back', () => {
     let call = 0;
     const ollama = fakeProvider('ollama', () => {
       call += 1;
-      return call === 2
+      // Call 1 is the discarded cold start; calls 2-4 are the three measured
+      // iterations. Fail the SECOND measured one. Written as an explicit
+      // index rather than `call === 2`, which used to mean the second
+      // iteration and now means the first.
+      return call === 3
         ? failedMeasurement('timeout')
         : successfulMeasurement();
     });

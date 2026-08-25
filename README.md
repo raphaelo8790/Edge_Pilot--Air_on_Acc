@@ -2,7 +2,7 @@
 
 **Compare local and cloud AI deployment — with real benchmarks, not guesses.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue?logo=typescript)](https://www.typescriptlang.org/)
 
@@ -100,7 +100,7 @@ the wire contract is in
 ### Run locally
 
 ```bash
-git clone https://github.com/Ahmed-Sleem/edgepilot-ai.git
+git clone https://github.com/raphaelo8790/Edge_Pilot--Air_on_Acc.git
 cd edgepilot-ai
 
 npm install
@@ -131,7 +131,10 @@ Environment variables are listed in [`.env.example`](.env.example).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+This work is licensed **AGPL-3.0-or-later** — if you run a modified version as a
+network service, you must offer its source to your users. The imported baseline
+(the first commit) remains under its original MIT licence, whose notice is
+retained. Both are set out in [LICENSE](LICENSE); full texts in `LICENSES/`.
 
 ---
 

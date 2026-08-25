@@ -32,6 +32,7 @@ import { BenchmarkRunner } from '../../src/modules/benchmark/application/service
 import { ReadinessCalculator } from '../../src/modules/benchmark/core/services/ReadinessCalculator';
 import { loadBenchmarkConfig } from '../../src/modules/benchmark/infrastructure/config';
 import { getProviderRegistry } from '../../src/modules/benchmark/infrastructure/providers/ProviderRegistry';
+import { OllamaResidencyProbe } from '../../src/modules/benchmark/infrastructure/OllamaResidencyProbe';
 
 /**
  * A prompt short enough to be cheap and long enough that the model has to
@@ -137,9 +138,12 @@ async function main(): Promise<void> {
       `(timeout ${config.timeoutMs} ms per iteration)...`
   );
 
+  const residencyProbe = new OllamaResidencyProbe({ host: config.ollamaHost });
+
   const outcome = await new BenchmarkRunner(
     registry,
-    new ReadinessCalculator()
+    new ReadinessCalculator(),
+    (requestedModel) => residencyProbe.observe(requestedModel)
   ).run({ provider: providerName, model, prompt, iterations });
 
   const document = {

@@ -9,8 +9,11 @@
 
 import { prisma } from '@/lib/prisma';
 import { ReadinessCalculator } from '../core/services/ReadinessCalculator';
+import { OllamaCatalog } from './OllamaCatalog';
+import { OllamaResidencyProbe } from './OllamaResidencyProbe';
 import { BenchmarkRunner } from '../application/services/BenchmarkRunner';
 import { RunBenchmark } from '../application/use-cases/RunBenchmark';
+import { RunComparison } from '../application/use-cases/RunComparison';
 import { assertServerSide, loadBenchmarkConfig } from './config';
 import { getProviderRegistry, type ProviderRegistry } from './providers/ProviderRegistry';
 import { PrismaBenchmarkContext } from './repositories/PrismaBenchmarkContext';
@@ -29,9 +32,19 @@ export function benchmarkRepository(): PrismaBenchmarkRepository {
 export function runBenchmarkUseCase(): RunBenchmark {
   assertServerSide('runBenchmarkUseCase');
 
+  const config = loadBenchmarkConfig();
+  const probe = new OllamaResidencyProbe({ host: config.ollamaHost });
+
   return new RunBenchmark({
     repository: benchmarkRepository(),
-    runner: new BenchmarkRunner(benchmarkRegistry(), new ReadinessCalculator()),
+    runner: new BenchmarkRunner(
+      benchmarkRegistry(),
+      new ReadinessCalculator(),
+      // Measures memory residency straight after a local run, so hardware fit
+      // is observed rather than assumed. Any failure returns nulls and the
+      // component is simply excluded from the score.
+      (model) => probe.observe(model)
+    ),
     context: new PrismaBenchmarkContext(prisma),
   });
 }
@@ -39,4 +52,26 @@ export function runBenchmarkUseCase(): RunBenchmark {
 export function benchmarkConfigWarnings(): string[] {
   assertServerSide('benchmarkConfigWarnings');
   return loadBenchmarkConfig().warnings;
+}
+
+export function runComparisonUseCase(): RunComparison {
+  assertServerSide('runComparisonUseCase');
+
+  const config = loadBenchmarkConfig();
+  const probe = new OllamaResidencyProbe({ host: config.ollamaHost });
+
+  return new RunComparison({
+    registry: benchmarkRegistry(),
+    // A factory rather than one shared runner: each entrant gets clean state,
+    // which matters when a comparison runs entrants concurrently.
+    createRunner: () =>
+      new BenchmarkRunner(benchmarkRegistry(), new ReadinessCalculator(), (model) =>
+        probe.observe(model)
+      ),
+  });
+}
+
+export function localModelCatalogue(): OllamaCatalog {
+  assertServerSide('localModelCatalogue');
+  return new OllamaCatalog({ host: loadBenchmarkConfig().ollamaHost });
 }

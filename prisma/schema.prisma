@@ -24,15 +24,32 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+/// Owner of workloads and benchmarks.
+///
+/// Moving away from accounts: `sessionId` is a client-generated identifier so
+/// a user can own rows without registering. It is added ALONGSIDE `email`
+/// rather than replacing it, because dropping a column that main's seed
+/// script and auth flow still read would break them at runtime, and the data
+/// would not be recoverable. Once nothing reads `email` or `name`, a later
+/// migration can drop them.
+///
+/// A note for whoever does that: do not key this table on the rotating
+/// session id used by the activity log. That one expires after two hours,
+/// and rows owned by an expired session would be orphaned. This wants a
+/// durable per-installation identifier, which happens to be supplied the
+/// same way.
 model User {
   id        String   @id @default(uuid())
-  email     String   @unique
+  /// Nullable since accounts became optional. Retained while main still uses it.
+  email     String?  @unique
+  /// Retained for the same reason. Nothing new should write to it.
   name      String?
+  /// Client-generated durable owner id. Null for rows created before this.
+  sessionId String?  @unique @map("session_id")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workloads  Workload[]
-  devices    Device[]
   benchmarks Benchmark[]
 
   @@map("users")
@@ -55,24 +72,6 @@ model Workload {
   @@map("workloads")
 }
 
-model Device {
-  id        String   @id @default(uuid())
-  name      String
-  cpu       String
-  ramGb     Int      @map("ram_gb")
-  gpu       String?
-  storageGb Int      @map("storage_gb")
-  network   String?
-  userId    String   @map("user_id")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  benchmarks Benchmark[]
-
-  @@index([userId])
-  @@map("devices")
-}
 
 // Shared catalog reference data, not user-owned. Retire a provider by setting
 // isActive = false rather than deleting it — deleting one is blocked while any
@@ -94,7 +93,6 @@ model Provider {
 model Benchmark {
   id          String    @id @default(uuid())
   workloadId  String    @map("workload_id")
-  deviceId    String    @map("device_id")
   providerId  String    @map("provider_id")
   model       String
   prompt      String
@@ -105,7 +103,6 @@ model Benchmark {
   completedAt DateTime? @map("completed_at")
 
   workload Workload @relation(fields: [workloadId], references: [id], onDelete: Cascade)
-  device   Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // No cascade: a provider cannot be deleted out from under a recorded run.
@@ -115,7 +112,6 @@ model Benchmark {
   readiness ReadinessScore?
 
   @@index([workloadId])
-  @@index([deviceId])
   @@index([providerId])
   @@index([userId])
   @@map("benchmarks")
@@ -130,6 +126,10 @@ model BenchmarkResult {
   ttftMs          Float?   @map("ttft_ms")
   success         Boolean  @default(true)
   errorMessage    String?  @map("error_message")
+  /// True for the discarded first call that loads the model. Excluded from
+  /// every average - see BenchmarkRunner. Defaults false so rows written
+  /// before this column existed keep their meaning.
+  warmup          Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   benchmark Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
@@ -141,9 +141,14 @@ model BenchmarkResult {
 model ReadinessScore {
   id               String   @id @default(uuid())
   benchmarkId      String   @unique @map("benchmark_id")
-  hardwareFit      Int      @map("hardware_fit")
+  // Nullable: a cloud run has no hardware fit, and an unobserved local run
+  // must not be recorded as 0. See HardwareFitAssessor.
+  hardwareFit      Int?     @map("hardware_fit")
   latencyScore     Int      @map("latency_score")
-  privacyScore     Int      @map("privacy_score")
+  // Nullable since privacy stopped being a numeric component of the score.
+  // Historic rows keep their value; new rows record `privacyClass` instead.
+  privacyScore     Int?     @map("privacy_score")
+  privacyClass     String?  @map("privacy_class")
   costScore        Int      @map("cost_score")
   reliabilityScore Int      @map("reliability_score")
   overallReadiness Int      @map("overall_readiness")
@@ -155,6 +160,33 @@ model ReadinessScore {
   benchmark Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
 
   @@map("readiness_scores")
+}
+
+/// A session log a user chose to send us.
+/// Written only on an explicit, confirmed request - never as a side effect of
+/// running a benchmark. `payload` holds the same redacted document the user can
+/// download, with one further restriction applied on the way in: prompt text is
+/// stripped even when the session had opted into recording it locally, because
+/// consenting to keep a transcript on your own machine is not consenting to
+/// upload it.
+/// No account, no user id, no IP. The session id is client-generated and is the
+/// only identifier here; it is not traceable to a person by us.
+model SharedFinding {
+  id                 String   @id @default(uuid())
+  sessionId          String   @map("session_id")
+  /// Schema marker of the payload, e.g. "edgepilot.session-log.v1".
+  schemaVersion      String   @map("schema_version")
+  payload            Json
+  eventCount         Int      @map("event_count")
+  /// Optional free-text note the sharer chose to attach.
+  note               String?
+  /// What the user was shown and agreed to, stored with the record.
+  consentStatement   String   @map("consent_statement")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("shared_findings")
 }
 
 model RateLimit {

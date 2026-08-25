@@ -1,7 +1,6 @@
 export interface Benchmark {
   id: string;
   workloadId: string;
-  deviceId: string;
   providerId: string;
   model: string;
   prompt: string;
@@ -21,15 +20,24 @@ export interface BenchmarkResult {
   ttftMs: number | null;
   success: boolean;
   errorMessage: string | null;
+  /** True for the discarded cold-start call. Never counted in an average. */
+  warmup: boolean;
   createdAt: Date;
 }
 
 export interface ReadinessScore {
   id: string;
   benchmarkId: string;
-  hardwareFit: number;
+  /** Null when hardware fit could not be assessed for this run. */
+  hardwareFit: number | null;
   latencyScore: number;
-  privacyScore: number;
+  /**
+   * Retained so historic rows keep their meaning. Always null for runs scored
+   * after privacy became a class - see PrivacyAssessor.
+   */
+  privacyScore: number | null;
+  /** Ordinal privacy class for this run, e.g. "on-device". */
+  privacyClass: string | null;
   costScore: number;
   reliabilityScore: number;
   overallReadiness: number;

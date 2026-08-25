@@ -13,6 +13,17 @@
 
 import type { ReadinessCalculator } from '../../core/services/ReadinessCalculator';
 import {
+  assessPrivacy,
+  type PrivacyAssessment,
+  type ProviderTier,
+} from '../../core/services/PrivacyAssessor';
+import { lookupPolicyFacts } from '../../core/services/privacy-catalogue';
+import {
+  assessHardwareFit,
+  type HardwareFitAssessment,
+  type HardwareObservation,
+} from '../../core/services/HardwareFitAssessor';
+import {
   decodeFailure,
   describeProviderError,
   isRetryableProviderError,
@@ -28,28 +39,30 @@ import {
   type FallbackAttempt,
   type MeasuredIteration,
   type MeasurementSummary,
+  type ColdStart,
 } from '../dtos/BenchmarkMeasurement';
 
 /**
  * Inputs the readiness score needs that this module does not measure.
  *
- * They are parameters rather than constants so that when device profiling
- * (Moe's work package) and a cost model land, they can be supplied without
- * touching this file — and so that today's defaults are visible at the call
- * site instead of buried in an expression.
+ * They are parameters rather than constants so that when a cost model lands
+ * it can be supplied without touching this file — and so that today's
+ * defaults are visible at the call site instead of buried in an expression.
  */
 export interface UnmeasuredReadinessInputs {
   /**
-   * 0-100. How well the device suits the workload. Not measured here: it
-   * needs the device profile and the eight reference profiles.
+   * 0-100, or null when it could not be established. Supplied by the caller
+   * only when no residency probe is available; otherwise the probe measures
+   * it. Null rather than a placeholder, so readiness renormalises instead of
+   * averaging in a number nobody produced.
    */
-  hardwareFit: number;
+  hardwareFit: number | null;
   /** USD per 1000 requests. Not measured here: there is no cost model yet. */
   estimatedCostPer1kRequests: number;
 }
 
 export const DEFAULT_UNMEASURED_INPUTS: UnmeasuredReadinessInputs = {
-  hardwareFit: 50,
+  hardwareFit: null,
   estimatedCostPer1kRequests: 0,
 };
 
@@ -59,6 +72,12 @@ export interface BenchmarkRunnerRequest {
   prompt: string;
   iterations: number;
   unmeasured?: Partial<UnmeasuredReadinessInputs>;
+  /**
+   * Billing tier the user declared for this provider. No inference API
+   * reports it, so it is declared rather than detected. Free and paid tiers
+   * commonly differ on retention and training-on-input.
+   */
+  tier?: ProviderTier;
 }
 
 export interface BenchmarkRunOutcome {
@@ -69,15 +88,31 @@ export interface BenchmarkRunOutcome {
   fallbackChain: FallbackAttempt[];
   simulated: boolean;
   results: MeasuredIteration[];
+  /**
+   * The extra first call, measured and then excluded from `summary` and from
+   * every score. Null when nothing ran.
+   */
+  coldStart: ColdStart | null;
   summary: MeasurementSummary;
   readinessScore: number | null;
   readinessBreakdown: {
-    hardwareFit: number;
+    /** Null when hardware fit could not be assessed - never 0. */
+    hardwareFit: number | null;
     latencyScore: number;
-    privacyScore: number;
     costScore: number;
     reliabilityScore: number;
   } | null;
+  /**
+   * What was observed about where the request went, which policy facts were
+   * verified, and which were not. Null when nothing ran.
+   */
+  privacy: PrivacyAssessment | null;
+  /**
+   * What the runtime reported about memory during this run: whether the model
+   * fitted in GPU memory, partially offloaded, or ran on CPU. Null when
+   * nothing ran or no probe was supplied.
+   */
+  hardware: HardwareFitAssessment | null;
   recommendation: string;
   evidence: string[];
   assumptions: string[];
@@ -86,16 +121,19 @@ export interface BenchmarkRunOutcome {
   terminalErrorCode: ProviderErrorCode | null;
 }
 
-const PRIVACY_SCORES: Record<'low' | 'medium' | 'high', number> = {
-  low: 30,
-  medium: 60,
-  high: 100,
-};
-
 export class BenchmarkRunner {
   constructor(
     private readonly registry: ProviderRegistry,
-    private readonly readinessCalculator: ReadinessCalculator
+    private readonly readinessCalculator: ReadinessCalculator,
+    /**
+     * Optional. Reads memory residency from the runtime after a run so that
+     * hardware fit is measured. Absent in unit tests and on any provider that
+     * cannot report it; hardware fit is then simply not assessed.
+     */
+    private readonly residencyProbe?: (
+      model: string,
+      providerName: string
+    ) => Promise<HardwareObservation | null>
   ) {}
 
   public async run(
@@ -128,31 +166,68 @@ export class BenchmarkRunner {
     let accepted: {
       provider: MeasuredAIProvider;
       responses: MeasuredResponse[];
+      residentBefore: boolean | null;
     } | null = null;
     let terminalErrorCode: ProviderErrorCode | null = null;
 
     for (let index = 0; index < chain.length; index += 1) {
       const provider = chain[index];
+      const providerMeta = provider.describe();
+
+      // Was the model already loaded BEFORE anything ran? This has to be read
+      // now, because after the first call the answer is always yes. It is the
+      // difference between "this model is slow" and "this model had to be
+      // read off disk", and nothing downstream can recover it later.
+      let residentBefore: boolean | null = null;
+
+      if (this.residencyProbe && providerMeta.type === 'local') {
+        try {
+          const before = await this.residencyProbe(
+            request.model,
+            providerMeta.name
+          );
+
+          // The probe returns null when it could not read residency at all -
+          // a different thing from reading it and finding nothing resident.
+          // Left unhandled this threw and was swallowed by the catch below,
+          // which produced the right value for the wrong reason and would
+          // have hidden any other fault in here.
+          residentBefore =
+            before === null
+              ? null
+              : before.residentBytes !== null && before.residentBytes > 0;
+        } catch {
+          residentBefore = null;
+        }
+      }
+
+      // One MORE than asked for. The first is discarded - see ColdStartSchema.
       const responses = await provider.measure(
         request.prompt,
         request.model,
-        request.iterations
+        request.iterations + 1
       );
 
-      const succeeded = responses.filter((response) => response.success);
+      // Selection and reporting both look ONLY at the iterations the caller
+      // asked for. The discarded cold start is not one of them: counting it
+      // made the chain report "4/4 iterations succeeded" for a request of 3,
+      // and a provider whose only successful call was the throwaway has not
+      // done the work it was asked to do.
+      const measuredOnly = responses.slice(1);
+      const succeeded = measuredOnly.filter((response) => response.success);
 
       if (succeeded.length > 0) {
         attempts.push({
           provider: provider.name,
           outcome: 'succeeded',
           error_code: null,
-          detail: `${succeeded.length}/${responses.length} iterations succeeded.`,
+          detail: `${succeeded.length}/${measuredOnly.length} iterations succeeded, after a discarded cold start.`,
         });
-        accepted = { provider, responses };
+        accepted = { provider, responses, residentBefore };
         break;
       }
 
-      const failureCode = dominantFailureCode(responses);
+      const failureCode = dominantFailureCode(measuredOnly);
 
       attempts.push({
         provider: provider.name,
@@ -186,9 +261,12 @@ export class BenchmarkRunner {
         fallbackChain: attempts,
         simulated: false,
         results: [],
+        coldStart: null,
         summary: emptySummary,
         readinessScore: null,
         readinessBreakdown: null,
+      privacy: null,
+      hardware: null,
         recommendation:
           'No recommendation: no iteration completed, so there is nothing to base one on.',
         evidence: [],
@@ -209,20 +287,57 @@ export class BenchmarkRunner {
     const metadata = provider.describe();
     const simulated = metadata.name === 'demo';
 
-    const results = accepted.responses.map((response, index) =>
+    // The first response is the cold start and is not a measurement of the
+    // model. Everything after it is, and is renumbered from 1 so the caller
+    // sees exactly the iterations it asked for.
+    const warmupResponse = accepted.responses[0] ?? null;
+    const measuredResponses = accepted.responses.slice(1);
+
+    const results = measuredResponses.map((response, index) =>
       toIteration(response, index + 1, provider.name, request.model)
+    );
+
+    const coldStart = buildColdStart(
+      warmupResponse === null
+        ? null
+        : toIteration(warmupResponse, 1, provider.name, request.model),
+      accepted.residentBefore
     );
 
     const summary = summarise(results, request.iterations);
 
     const latencyForScore = summary.latency_ms_mean ?? 0;
     const reliabilityScore = summary.success_rate_percent;
-    const privacyScore = PRIVACY_SCORES[metadata.privacyLevel];
+    // Privacy is assessed from where the request actually went, plus policy
+    // facts that carry a source and a date. It is null when this provider's
+    // terms have not been verified for the declared tier - never a guess.
+    // Residency must be read while the model is still loaded, so this happens
+    // immediately after the iterations and before anything is scored.
+    let observation: HardwareObservation | null = null;
+
+    if (this.residencyProbe && metadata.type === 'local') {
+      try {
+        observation = await this.residencyProbe(request.model, metadata.name);
+      } catch {
+        observation = null;
+      }
+    }
+
+    const hardware = assessHardwareFit(metadata.type, observation);
+    const hardwareFit =
+      hardware.score !== null ? hardware.score : unmeasured.hardwareFit;
+
+    const tier: ProviderTier =
+      request.tier ?? (metadata.type === 'local' ? 'local' : 'unknown');
+    const privacy = assessPrivacy(
+      metadata.baseUrl,
+      tier,
+      lookupPolicyFacts(metadata.name, tier)
+    );
 
     const readinessScore = this.readinessCalculator.calculate({
-      hardwareFit: unmeasured.hardwareFit,
+      hardwareFit,
       latencyMs: latencyForScore,
-      privacyLevel: metadata.privacyLevel,
       estimatedCost: unmeasured.estimatedCostPer1kRequests,
       reliabilityScore,
     });
@@ -238,8 +353,14 @@ export class BenchmarkRunner {
 
     const fallbackUsed = provider.name !== request.provider;
 
-    const evidence = buildEvidence(summary, metadata.name, request.model);
-    const assumptions = buildAssumptions(unmeasured, metadata.name, simulated);
+    const evidence = buildEvidence(
+      summary,
+      metadata.name,
+      request.model,
+      hardware,
+      coldStart
+    );
+    const assumptions = buildAssumptions(unmeasured, hardware, simulated);
     const limitations = buildLimitations(summary, attempts, metadata, simulated);
 
     return {
@@ -250,12 +371,12 @@ export class BenchmarkRunner {
       fallbackChain: attempts,
       simulated,
       results,
+      coldStart,
       summary,
       readinessScore,
       readinessBreakdown: {
-        hardwareFit: Math.round(unmeasured.hardwareFit),
+        hardwareFit: hardwareFit === null ? null : Math.round(hardwareFit),
         latencyScore: Math.round(latencyScore),
-        privacyScore: Math.round(privacyScore),
         costScore: Math.round(costScore),
         reliabilityScore: Math.round(reliabilityScore),
       },
@@ -267,7 +388,13 @@ export class BenchmarkRunner {
       ),
       evidence,
       assumptions,
-      limitations,
+      limitations: [
+        ...limitations,
+        ...privacy.limitations,
+        ...hardware.limitations,
+      ],
+      privacy,
+      hardware,
       terminalErrorCode: null,
     };
   }
@@ -332,7 +459,9 @@ function dominantFailureCode(
 function buildEvidence(
   summary: MeasurementSummary,
   providerName: string,
-  model: string
+  model: string,
+  hardware: HardwareFitAssessment,
+  coldStart: ColdStart | null
 ): string[] {
   const evidence: string[] = [
     `Measured ${summary.iterations_succeeded}/${summary.iterations_run} successful iterations of ${model} on ${providerName}.`,
@@ -366,19 +495,83 @@ function buildEvidence(
     );
   }
 
+  // Where the model physically sat. Read from the runtime immediately after
+  // the run (/api/ps size and size_vram), so it is a measurement of this run
+  // on this machine - not a calculation from the model's file size.
+  if (hardware.state === 'FITS_GPU' || hardware.state === 'PARTIAL_OFFLOAD' || hardware.state === 'CPU_ONLY') {
+    evidence.push(`${hardware.summary} (measured from the runtime.)`);
+  }
+
+  // Reported, never averaged. This is the one figure in the list that is
+  // deliberately excluded from every number above it.
+  if (coldStart !== null && coldStart.success) {
+    const ttft =
+      coldStart.ttft_ms === null
+        ? ''
+        : `, ${Math.round(coldStart.ttft_ms)} ms of it before the first token`;
+
+    evidence.push(
+      `Cold start: the discarded first call took ${Math.round(coldStart.latency_ms)} ms${ttft}. ${coldStart.note}`
+    );
+  }
+
   return evidence;
+}
+
+/**
+ * Describes the discarded first call.
+ *
+ * The note is written from what was OBSERVED about residency, not from the
+ * latency. A slow first call on an already-loaded model is a slow model; the
+ * same latency on a model that was not loaded is a disk read. Only the probe
+ * can tell those apart, and when it could not, this says so rather than
+ * picking the more interesting explanation.
+ */
+function buildColdStart(
+  warmup: MeasuredIteration | null,
+  residentBefore: boolean | null
+): ColdStart | null {
+  if (warmup === null) {
+    return null;
+  }
+
+  const note =
+    residentBefore === false
+      ? 'The model was not loaded when this run started, so this includes reading it into memory. It is excluded from every average above.'
+      : residentBefore === true
+        ? 'The model was already loaded, so this was not a cold load. It is excluded anyway, so that every run is measured the same way.'
+        : 'Whether the model was already loaded could not be checked, so this first call is excluded either way.';
+
+  return {
+    latency_ms: warmup.latency_ms,
+    ttft_ms: warmup.ttft_ms,
+    success: warmup.success,
+    error_code: warmup.error_code,
+    model_was_resident_before: residentBefore,
+    note,
+  };
 }
 
 function buildAssumptions(
   unmeasured: UnmeasuredReadinessInputs,
-  providerName: string,
+  hardware: HardwareFitAssessment,
   simulated: boolean
 ): string[] {
-  const assumptions: string[] = [
-    `Hardware fit is assumed to be ${unmeasured.hardwareFit}/100. It is not measured by this module; device-aware scoring belongs to the device-profile work package.`,
-    `Cost is assumed to be $${unmeasured.estimatedCostPer1kRequests} per 1000 requests. No cost model has been measured, so the cost component of the readiness score carries no evidence.`,
-    `The privacy score is assigned from the provider's deployment model (${providerName}), not from a review of the vendor's data-handling terms.`,
-  ];
+  const assumptions: string[] = [];
+
+  if (hardware.score === null) {
+    assumptions.push(
+      `Hardware fit was not assessed for this run (${hardware.state}). It is excluded from the readiness score rather than assumed, so the score is an average of the components that could be established.`
+    );
+  } else if (unmeasured.hardwareFit !== null && hardware.state === 'NOT_OBSERVED') {
+    assumptions.push(
+      `Hardware fit is assumed to be ${unmeasured.hardwareFit}/100 because it was supplied by the caller rather than measured.`
+    );
+  }
+
+  assumptions.push(
+    `Cost is assumed to be $${unmeasured.estimatedCostPer1kRequests} per 1000 requests. No cost model has been measured, so the cost component of the readiness score carries no evidence.`
+  );
 
   if (simulated) {
     assumptions.push(

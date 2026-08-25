@@ -1,0 +1,317 @@
+{
+  "schemaVersion": "1.0.0",
+  "workloadId": "construction-component-recognition-v1",
+  "workloadVersion": "1.0.0",
+  "datasetId": "edgepilot-synthetic-construction-components-v1",
+  "manifestVersion": "1.0.0",
+  "manifestSha256": "30fd92076bbfc13be4ceed672e1df62a8511c32755b695699296edf38a99dea1",
+  "preprocessingVersion": "sharp-png-v1",
+  "promptVersion": "1.0.0",
+  "executionMode": "live",
+  "provider": "ollama",
+  "providerKind": "local",
+  "model": "llava:latest",
+  "deviceProfileId": "local-workstation",
+  "gitCommitSha": "b13af6e402d594a5165f0e0761840e1a343778c3",
+  "startedAt": "2026-08-23T20:02:49.552Z",
+  "completedAt": "2026-08-23T20:03:01.476Z",
+  "records": [
+    {
+      "sampleId": "hardhat-01",
+      "expectedLabel": "hardhat",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 187.1694,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-02",
+      "expectedLabel": "hardhat",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 546.5257999999999,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-03",
+      "expectedLabel": "hardhat",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 543.8842,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-01",
+      "expectedLabel": "safety_vest",
+      "rawOutput": " safety_vest ",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 512.0063999999998,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-02",
+      "expectedLabel": "safety_vest",
+      "rawOutput": " safety_vest ",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 557.1122999999998,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-03",
+      "expectedLabel": "safety_vest",
+      "rawOutput": " safety_vest ",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 524.1226000000001,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-01",
+      "expectedLabel": "gloves",
+      "rawOutput": " Hardhat ",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 513.4594000000006,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-02",
+      "expectedLabel": "gloves",
+      "rawOutput": " Gloves ",
+      "normalizedLabel": "gloves",
+      "latencyMs": 589.8206,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-03",
+      "expectedLabel": "gloves",
+      "rawOutput": " Hardhat ",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 519.3818000000001,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-01",
+      "expectedLabel": "goggles",
+      "rawOutput": " Goggles ",
+      "normalizedLabel": "goggles",
+      "latencyMs": 535.8159000000005,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-02",
+      "expectedLabel": "goggles",
+      "rawOutput": " Goggles ",
+      "normalizedLabel": "goggles",
+      "latencyMs": 518.4471000000003,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-03",
+      "expectedLabel": "goggles",
+      "rawOutput": " Goggles ",
+      "normalizedLabel": "goggles",
+      "latencyMs": 542.0412999999999,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-01",
+      "expectedLabel": "mask",
+      "rawOutput": " Hardhat ",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 519.1802000000007,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-02",
+      "expectedLabel": "mask",
+      "rawOutput": " Hardhat ",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 506.2314000000006,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-03",
+      "expectedLabel": "mask",
+      "rawOutput": " Mask ",
+      "normalizedLabel": "mask",
+      "latencyMs": 499.1412999999993,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-01",
+      "expectedLabel": "ladder",
+      "rawOutput": " Ladder ",
+      "normalizedLabel": "ladder",
+      "latencyMs": 529.5851999999995,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-02",
+      "expectedLabel": "ladder",
+      "rawOutput": " ladder ",
+      "normalizedLabel": "ladder",
+      "latencyMs": 519.7579000000005,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-03",
+      "expectedLabel": "ladder",
+      "rawOutput": " Ladder ",
+      "normalizedLabel": "ladder",
+      "latencyMs": 721.4058999999997,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-01",
+      "expectedLabel": "safety_cone",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 562.5331999999999,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-02",
+      "expectedLabel": "safety_cone",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 607.4210000000003,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-03",
+      "expectedLabel": "safety_cone",
+      "rawOutput": " safety_cone ",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 1202.0445,
+      "providerSuccess": true,
+      "errorCategory": null
+    }
+  ],
+  "metrics": {
+    "totalSamples": 21,
+    "correctPredictions": 14,
+    "exactMatchAccuracy": 0.6666666666666666,
+    "macroPrecision": 0.7857142857142857,
+    "macroRecall": 0.6666666666666666,
+    "macroF1": 0.6666666666666667,
+    "invalidOutputRate": 0,
+    "successfulRequestRate": 1,
+    "medianLatencyMs": 529.5851999999995,
+    "p95LatencyMs": 721.4058999999997,
+    "throughputSamplesPerSecond": 1.7861566632565815,
+    "perClass": [
+      {
+        "label": "hardhat",
+        "truePositive": 0,
+        "falsePositive": 4,
+        "falseNegative": 3,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0,
+        "support": 3
+      },
+      {
+        "label": "safety_vest",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "gloves",
+        "truePositive": 1,
+        "falsePositive": 0,
+        "falseNegative": 2,
+        "precision": 1,
+        "recall": 0.3333333333333333,
+        "f1": 0.5,
+        "support": 3
+      },
+      {
+        "label": "goggles",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "mask",
+        "truePositive": 1,
+        "falsePositive": 0,
+        "falseNegative": 2,
+        "precision": 1,
+        "recall": 0.3333333333333333,
+        "f1": 0.5,
+        "support": 3
+      },
+      {
+        "label": "ladder",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "safety_cone",
+        "truePositive": 3,
+        "falsePositive": 3,
+        "falseNegative": 0,
+        "precision": 0.5,
+        "recall": 1,
+        "f1": 0.6666666666666666,
+        "support": 3
+      }
+    ]
+  },
+  "thresholds": {
+    "minimumAccuracy": 0.8,
+    "minimumMacroF1": 0.75,
+    "maximumInvalidOutputRate": 0.05,
+    "minimumSuccessfulRequestRate": 0.95
+  },
+  "passed": false,
+  "limitations": [
+    "The bundled dataset contains synthetic fixtures and does not estimate production-site accuracy.",
+    "This workload measures single-label classification without localization.",
+    "Evidence directory: evidence\\vision-benchmark.",
+    "Provider execution mode: local.",
+    "One discarded warm-up request was made before timing began, so the latencies below measure inference rather than model loading."
+  ],
+  "labels": [
+    "hardhat",
+    "safety_vest",
+    "gloves",
+    "goggles",
+    "mask",
+    "ladder",
+    "safety_cone"
+  ]
+}

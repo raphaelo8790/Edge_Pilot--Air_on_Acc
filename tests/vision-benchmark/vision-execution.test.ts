@@ -150,9 +150,12 @@ describe('vision benchmark execution boundary', () => {
       [100, 125]
     );
 
-    const evidence = await executeVisionBenchmark(
-      createExecutionInput(provider, clock)
-    );
+    // warmUp disabled: this test counts one request per sample, and a
+    // discarded warm-up is deliberately an extra one. It has its own tests.
+    const evidence = await executeVisionBenchmark({
+      ...createExecutionInput(provider, clock),
+      warmUp: false,
+    });
 
     expect(evidence.provider).toBe('fake-local');
     expect(evidence.model).toBe('local-model');
@@ -224,22 +227,79 @@ describe('vision benchmark execution boundary', () => {
       [0, 10, 10, 20]
     );
 
-    const evidence = await executeVisionBenchmark(
-      createExecutionInput(
-        provider,
-        clock,
-        [
-          createSample('sample-001', 'hardhat'),
-          createSample('sample-002', 'gloves'),
-        ]
-      )
-    );
+    const evidence = await executeVisionBenchmark({
+      // Scripted responses are consumed in order, so a discarded warm-up call
+      // would take 'hardhat' and hand 'gloves' to sample-001.
+      ...createExecutionInput(provider, clock, [
+        createSample('sample-001', 'hardhat'),
+        createSample('sample-002', 'gloves'),
+      ]),
+      warmUp: false,
+    });
 
     expect(
       evidence.records.map((record) => record.sampleId)
     ).toEqual(['sample-001', 'sample-002']);
 
     expect(evidence.metrics.exactMatchAccuracy).toBe(1);
+  });
+
+  test('makes one discarded warm-up request on a local provider, and scores none of it', async () => {
+    // The cost absorbed is loading model weights into GPU memory. The text
+    // side of this project measured the same effect at 36,445 ms cold against
+    // 369 ms warm; scoring that against image one describes a disk read.
+    const provider = new FakeVisionProvider(
+      'fake-ollama',
+      'fake-model',
+      'local',
+      async () => ({
+        rawOutput: 'hardhat',
+        latencyMs: 10,
+        success: true,
+        errorMessage: null,
+      })
+    );
+
+    const clock = new SequenceClock(
+      ['2026-07-24T14:00:00.000Z', '2026-07-24T14:00:01.000Z'],
+      [0, 10]
+    );
+
+    const evidence = await executeVisionBenchmark(
+      createExecutionInput(provider, clock)
+    );
+
+    expect(provider.requests).toHaveLength(2);
+    expect(evidence.records).toHaveLength(1);
+    expect(evidence.metrics.totalSamples).toBe(1);
+    expect(evidence.limitations.join(' ')).toContain(
+      'discarded warm-up request'
+    );
+  });
+
+  test('makes no warm-up request on a cloud provider', async () => {
+    // A cloud model has no weights to load locally, so a warm-up would be a
+    // billable request and one more image handed to a third party for nothing.
+    const provider = new FakeVisionProvider(
+      'fake-gemini',
+      'fake-model',
+      'cloud',
+      async () => ({
+        rawOutput: 'hardhat',
+        latencyMs: 10,
+        success: true,
+        errorMessage: null,
+      })
+    );
+
+    const clock = new SequenceClock(
+      ['2026-07-24T14:00:00.000Z', '2026-07-24T14:00:01.000Z'],
+      [0, 10]
+    );
+
+    await executeVisionBenchmark(createExecutionInput(provider, clock));
+
+    expect(provider.requests).toHaveLength(1);
   });
 
   test('converts a thrown provider error into failure evidence', async () => {

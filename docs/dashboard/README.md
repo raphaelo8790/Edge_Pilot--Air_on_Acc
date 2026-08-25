@@ -1,7 +1,6 @@
 # Benchmark Dashboard — module documentation
 
-Owner: **Kareem Ehab** (Product UI & Benchmark Dashboard Engineer /
-Integration Lead). Route: **`/dashboard`**. Branch: `feature/4-dashboard-ui`.
+Work package: **product UI & benchmark dashboard** / integration lead. Route: **`/dashboard`**. Branch: `feature/4-dashboard-ui`.
 
 ## What it is
 

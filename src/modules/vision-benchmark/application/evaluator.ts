@@ -2,6 +2,8 @@ import { normalizeVisionLabel } from '../core/normalization';
 import { calculateVisionMetrics } from '../core/metrics';
 import { VisionBenchmarkEvidenceSchema } from '../core/schemas';
 import {
+  VISION_LABELS,
+  VISION_WORKLOAD_ID,
   VisionBenchmarkEvaluationInput,
   VisionBenchmarkEvidence,
   VisionBenchmarkThresholds,
@@ -89,12 +91,18 @@ export function evaluateVisionBenchmark(
     ...input.thresholds,
   };
 
+  // The dataset's own classes when it declares them, the built-in seven when
+  // it does not. Both the normaliser and the per-class matrix use this one
+  // value, so a run can never score against a different set than it validated
+  // against.
+  const labels: readonly string[] = input.labels ?? VISION_LABELS;
+
   const records: VisionPredictionRecord[] = input.samples.map(
     (sample, index) => {
       const response = input.responses[index];
 
       const normalizedLabel = response.success
-        ? normalizeVisionLabel(response.rawOutput)
+        ? normalizeVisionLabel(response.rawOutput, labels)
         : null;
 
       return {
@@ -112,7 +120,7 @@ export function evaluateVisionBenchmark(
     }
   );
 
-  const metrics = calculateVisionMetrics(records);
+  const metrics = calculateVisionMetrics(records, labels);
 
   const passed =
     metrics.exactMatchAccuracy >= thresholds.minimumAccuracy &&
@@ -124,7 +132,7 @@ export function evaluateVisionBenchmark(
 
   const evidence: VisionBenchmarkEvidence = {
     schemaVersion: '1.0.0',
-    workloadId: 'construction-component-recognition-v1',
+    workloadId: input.workloadId ?? VISION_WORKLOAD_ID,
     workloadVersion: input.workloadVersion,
     datasetId: input.datasetId,
     manifestVersion: input.manifestVersion,
@@ -144,6 +152,9 @@ export function evaluateVisionBenchmark(
     thresholds,
     passed,
     limitations: input.limitations ?? [],
+    // Recorded so a reader a year from now knows which classes this run could
+    // have produced, without having to guess from the records.
+    labels,
   };
 
   return VisionBenchmarkEvidenceSchema.parse(evidence);

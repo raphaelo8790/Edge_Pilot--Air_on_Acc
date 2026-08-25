@@ -1,3 +1,4 @@
+import { VisionDashboardRowSchema } from '../../src/modules/vision-benchmark/core/schemas';
 import {
   GET,
   POST,
@@ -20,8 +21,29 @@ describe('vision benchmark API integration', () => {
 
     expect(response.status).toBe(200);
     expect(payload.success).toBe(true);
-    expect(payload.data).toHaveLength(2);
-    expect(payload.data[0].executionMode).toBe('controlled');
+
+    // Asserts what the endpoint promises - every row parses and the two
+    // controlled fixtures are served - rather than a fixed COUNT. The old
+    // assertion was toHaveLength(2), which meant recording a single real
+    // benchmark broke the suite: a test that fails when someone uses the
+    // product is testing the contents of a directory, not the endpoint.
+    const models = payload.data.map(
+      (row: { model: string }) => row.model
+    );
+
+    expect(models).toContain('gemma4-fixture');
+    expect(models).toContain('gemini-3.6-flash-fixture');
+
+    for (const row of payload.data) {
+      expect(VisionDashboardRowSchema.safeParse(row).success).toBe(true);
+    }
+
+    // Ranked best-accuracy first, whatever else is in the directory.
+    const accuracies = payload.data.map(
+      (row: { accuracy: number }) => row.accuracy
+    );
+
+    expect(accuracies).toEqual([...accuracies].sort((a, b) => b - a));
   });
 
   test('disables provider execution without a server token', async () => {

@@ -17,7 +17,7 @@ deterministic raster drawing primitives and a deterministic PNG encoder. No
 external image, dataset, logo, person, or location is copied.
 
 Repository source:
-[Ahmed-Sleem/edgepilot-ai](https://github.com/Ahmed-Sleem/edgepilot-ai).
+[Edge_Pilot--Air_on_Acc](https://github.com/raphaelo8790/Edge_Pilot--Air_on_Acc).
 
 ## License
 
@@ -87,3 +87,17 @@ The images are clean synthetic icons with one centered component. They do not
 represent occlusion, poor lighting, camera noise, clutter, scale variation,
 people wearing equipment, or construction-site domain shift. A production
 benchmark must add a separately licensed, privacy-reviewed real-world dataset.
+
+## Manifest version history
+
+**1.0.1** - the `source.repository` metadata field was repointed at this
+repository. **No sample, image, label or checksum changed**; the images are
+byte-identical to 1.0.0 and regenerate identically from the same script.
+
+This is recorded because the manifest's SHA-256 changed with it, and that hash
+is what evidence files use to decide whether two runs measured the same
+dataset. Committed evidence carrying the 1.0.0 hash was produced against
+identical image data and remains directly comparable to runs against 1.0.1 -
+the only difference between the two manifests is a URL string in the metadata.
+
+**1.0.0** - initial.

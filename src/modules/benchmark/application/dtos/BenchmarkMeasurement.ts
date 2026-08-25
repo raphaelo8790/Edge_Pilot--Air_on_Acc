@@ -80,6 +80,39 @@ export const MeasurementSummarySchema = z.object({
 
 export type MeasurementSummary = z.infer<typeof MeasurementSummarySchema>;
 
+/**
+ * The discarded first call.
+ *
+ * Every run makes one more request than the caller asked for. The first is
+ * thrown away, because on a local runtime it pays for reading the model off
+ * disk into GPU memory and that cost belongs to nothing being measured.
+ * Observed on this project: an 8B model reported 36,445 ms to first token on
+ * a cold call and 369 ms on the next one - a 99x difference from the same
+ * model, same prompt, same machine. Folding that into a mean produces a
+ * number that describes disk I/O and calls it inference.
+ *
+ * It is reported rather than hidden, because "how long until this model is
+ * usable" is a real question - it is just a different question from "how fast
+ * does it answer".
+ */
+export const ColdStartSchema = z.object({
+  /** How long the discarded call took, in ms. */
+  latency_ms: z.number().nonnegative(),
+  ttft_ms: z.number().nonnegative().nullable(),
+  success: z.boolean(),
+  error_code: ProviderErrorCodeSchema.nullable(),
+  /**
+   * Whether the model was already resident when the run started, read from
+   * the runtime BEFORE the first call. Null when it could not be checked -
+   * a cloud provider, or a probe that failed. Unknown, never false.
+   */
+  model_was_resident_before: z.boolean().nullable(),
+  /** Plain-language explanation of what this figure is and is not. */
+  note: z.string(),
+});
+
+export type ColdStart = z.infer<typeof ColdStartSchema>;
+
 export const FallbackAttemptSchema = z.object({
   provider: z.string().min(1),
   outcome: z.enum(['succeeded', 'failed', 'skipped']),
@@ -110,6 +143,11 @@ export const BenchmarkRunSchema = z.object({
   /** True when any figure came from the simulated demo adapter. */
   simulated: z.boolean(),
   results: z.array(MeasuredIterationSchema),
+  /**
+   * The extra first call, excluded from `summary` and from the readiness
+   * score. Null when nothing ran at all.
+   */
+  cold_start: ColdStartSchema.nullable(),
   summary: MeasurementSummarySchema,
   readiness_score: z.number().min(0).max(100).nullable(),
   recommendation: z.string(),

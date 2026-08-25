@@ -221,7 +221,11 @@ export function fakeProvider(
         name,
         type: metadata.type ?? 'local',
         displayName: metadata.displayName ?? name,
-        baseUrl: metadata.baseUrl ?? null,
+        baseUrl:
+          metadata.baseUrl ??
+          ((metadata.type ?? 'local') === 'local'
+            ? 'http://localhost:11434'
+            : 'https://api.test.invalid/v1'),
         privacyLevel: metadata.privacyLevel ?? 'high',
         reports: metadata.reports ?? { ttft: true, outputTokens: true },
         officialSource: metadata.officialSource ?? 'test double',

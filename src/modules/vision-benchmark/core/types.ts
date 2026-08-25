@@ -14,6 +14,19 @@ export const VISION_WORKLOAD_ID =
 export const VISION_DATASET_ID =
   'edgepilot-synthetic-construction-components-v1' as const;
 
+/**
+ * The seven built-in construction-safety classes.
+ *
+ * WIDENED. Labels used to be this union everywhere, which meant a dataset
+ * could only ever be about construction PPE - a user bringing their own images
+ * had no way to say what they were of. Labels are now plain strings chosen by
+ * whoever defines the dataset, and the SET of labels for a run travels on the
+ * evidence, so the per-class matrix can still include a class that received no
+ * predictions at all (which is exactly the class you most want to see).
+ *
+ * This type is kept because the built-in workload, its prompt and its manifest
+ * are still about these seven, and narrowing them there is worth doing.
+ */
 export type VisionLabel = (typeof VISION_LABELS)[number];
 export type VisionProviderKind = 'local' | 'cloud';
 export type VisionExecutionMode = 'controlled' | 'live';
@@ -21,9 +34,11 @@ export type VisionExecutionMode = 'controlled' | 'live';
 export interface VisionBenchmarkSample {
   id: string;
   imagePath: string;
-  expectedLabel: VisionLabel;
+  /** Dataset-defined. The built-in manifest uses VisionLabel values. */
+  expectedLabel: string;
   sourceId: string;
-  licenseSpdx: 'MIT';
+  /** SPDX identifier, e.g. "MIT" or "CC-BY-4.0". Declared, not verified. */
+  licenseSpdx: string;
   licenseVerified: boolean;
   privacyReviewed: boolean;
   containsPeople: boolean;
@@ -53,16 +68,24 @@ export interface VisionProviderResponse {
 
 export interface VisionPredictionRecord {
   sampleId: string;
-  expectedLabel: VisionLabel;
+  /** Dataset-defined. The built-in manifest uses VisionLabel values. */
+  expectedLabel: string;
   rawOutput: string;
-  normalizedLabel: VisionLabel | null;
+  normalizedLabel: string | null;
   latencyMs: number;
   providerSuccess: boolean;
   errorCategory: 'provider_error' | 'invalid_output' | null;
 }
 
 export interface ClassMetrics {
-  label: VisionLabel;
+  /**
+   * Dataset-defined, matching VisionAggregateMetricsSchema.
+   *
+   * The last of the label narrowings. Per-class metrics are built from the
+   * label set the run declared, so pinning this to the built-in seven would
+   * mean a user's dataset could be measured but not described.
+   */
+  label: string;
   truePositive: number;
   falsePositive: number;
   falseNegative: number;
@@ -96,9 +119,10 @@ export interface VisionBenchmarkThresholds {
 
 export interface VisionBenchmarkEvidence {
   schemaVersion: '1.0.0';
-  workloadId: typeof VISION_WORKLOAD_ID;
+  /** The built-in workload uses VISION_WORKLOAD_ID; uploads name their own. */
+  workloadId: string;
   workloadVersion: string;
-  datasetId: typeof VISION_DATASET_ID;
+  datasetId: string;
   manifestVersion: string;
   manifestSha256: string;
   preprocessingVersion: string;
@@ -116,11 +140,25 @@ export interface VisionBenchmarkEvidence {
   thresholds: VisionBenchmarkThresholds;
   passed: boolean;
   limitations: string[];
+  /**
+   * Every class this dataset can produce, in order.
+   *
+   * Optional so that evidence written before datasets could define their own
+   * labels still parses - readers fall back to VISION_LABELS. It is not
+   * derivable from the records: a class with zero predictions and zero samples
+   * would vanish from a per-class matrix that inferred its classes, and a
+   * class the model never once predicted is precisely the interesting one.
+   */
+  labels?: readonly string[];
 }
 
 export interface VisionBenchmarkEvaluationInput {
   workloadVersion: string;
-  datasetId: typeof VISION_DATASET_ID;
+  datasetId: string;
+  /** Defaults to VISION_LABELS when the dataset does not define its own. */
+  labels?: readonly string[];
+  /** Defaults to VISION_WORKLOAD_ID. */
+  workloadId?: string;
   manifestVersion: string;
   manifestSha256: string;
   preprocessingVersion: string;
@@ -140,8 +178,12 @@ export interface VisionBenchmarkEvaluationInput {
 }
 
 export interface VisionDashboardRow {
-  workloadId: typeof VISION_WORKLOAD_ID;
-  datasetId: typeof VISION_DATASET_ID;
+  // Widened alongside VisionBenchmarkEvidence and VisionDashboardRowSchema.
+  // A row can come from a dataset the user brought, which names itself; these
+  // were the last two places still asserting that every result on the
+  // dashboard is about construction safety.
+  workloadId: string;
+  datasetId: string;
   provider: string;
   providerKind: VisionProviderKind;
   model: string;

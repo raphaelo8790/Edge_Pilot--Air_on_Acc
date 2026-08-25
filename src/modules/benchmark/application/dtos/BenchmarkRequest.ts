@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const BenchmarkRequestSchema = z.object({
   workload_id: z.string().uuid(),
-  device_id: z.string().uuid(),
   provider: z.enum(['ollama', 'gemini', 'groq']),
   model: z.string().min(1),
   prompt: z.string().min(1).max(10000),

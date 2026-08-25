@@ -63,23 +63,20 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Run as a non-root user. The node image already provides uid/gid 1000 as
+# `node`; nothing in the application needs to write to its own image.
+USER node
+
 # `output: 'standalone'` (next.config.mjs) produces a server.js plus the traced
 # subset of node_modules. static/ and public/ are not traced and are copied
 # alongside it.
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-
-# Create public directory BEFORE switching to node user
-RUN mkdir -p ./public && chown node:node ./public
 COPY --from=builder --chown=node:node /app/public ./public
 
 # Migrations and the schema travel with the image so an operator can run
 # `npx prisma migrate deploy` against the container's own copy.
 COPY --from=builder --chown=node:node /app/prisma ./prisma
-
-# Run as a non-root user. The node image already provides uid/gid 1000 as
-# `node`; nothing in the application needs to write to its own image.
-USER node
 
 EXPOSE 3000
 

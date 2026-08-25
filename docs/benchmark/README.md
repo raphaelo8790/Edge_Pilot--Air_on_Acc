@@ -272,7 +272,7 @@ Two notes for whoever runs this:
 
 ---
 
-## For Ahmed at integration time
+## At integration time
 
 Merge conflicts are yours, not mine — but here is what you need to know to
 resolve them well.

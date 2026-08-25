@@ -1,0 +1,172 @@
+{
+  "artefact": "measured benchmark run",
+  "generated_by": "npm run bench:run -- --provider=ollama --model=llama3.2:latest --iterations=5",
+  "what_this_proves": "Latency, time-to-first-token and token throughput as observed from this machine against this provider, on this date. Each field carries a provenance label.",
+  "what_this_does_not_prove": "Nothing about output quality, and nothing about cost — neither is measured. Latency includes network transit and is specific to this machine and connection.",
+  "environment": {
+    "hostname": "DESKTOP-L565NGF",
+    "platform": "win32",
+    "os_release": "10.0.26200",
+    "architecture": "x64",
+    "cpu_model": "Intel(R) Core(TM) i7-14700HX",
+    "cpu_cores": 28,
+    "total_memory_gb": 31.71,
+    "node_version": "v22.16.0",
+    "accelerator": "GPU — llama3.2:latest fully resident in VRAM (size_vram 3310184448 B == size, 0 bytes on CPU), verified via GET /api/ps on a reload under the same daemon, model and settings as the run. Not sampled during the benchmark itself. Q4_K_M, 3.2B params, context_length 4096. Specific GPU model not recorded.",
+    "captured_at": "2026-07-31T00:15:46.274Z"
+  },
+  "request": {
+    "provider": "ollama",
+    "model": "llama3.2:latest",
+    "prompt": "In exactly three sentences, explain what edge AI inference is and when it is preferable to a cloud API.",
+    "iterations": 5
+  },
+  "requested_provider": "ollama",
+  "effective_provider": "ollama",
+  "fallback_used": false,
+  "fallback_chain": [
+    {
+      "provider": "ollama",
+      "outcome": "succeeded",
+      "error_code": null,
+      "detail": "5/5 iterations succeeded."
+    }
+  ],
+  "simulated": false,
+  "summary": {
+    "iterations_requested": 5,
+    "iterations_run": 5,
+    "iterations_succeeded": 5,
+    "success_rate_percent": 100,
+    "latency_ms_mean": 2758.887,
+    "latency_ms_min": 1482.361,
+    "latency_ms_max": 7570.614,
+    "latency_ms_p50": 1542.145,
+    "ttft_ms_mean": 1305.313,
+    "tokens_per_second_mean": 91.347,
+    "output_tokens_total": 623
+  },
+  "iterations_detail": [
+    {
+      "iteration": 1,
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "latency_ms": 7570.614,
+      "ttft_ms": 6169.492,
+      "tokens_per_second": 86.743,
+      "output_tokens": 114,
+      "input_tokens": 46,
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "provenance": {
+        "latency_ms": "measured",
+        "ttft_ms": "measured",
+        "tokens_per_second": "derived",
+        "output_tokens": "measured"
+      }
+    },
+    {
+      "iteration": 2,
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "latency_ms": 1542.145,
+      "ttft_ms": 92.457,
+      "tokens_per_second": 92.203,
+      "output_tokens": 126,
+      "input_tokens": 46,
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "provenance": {
+        "latency_ms": "measured",
+        "ttft_ms": "measured",
+        "tokens_per_second": "derived",
+        "output_tokens": "measured"
+      }
+    },
+    {
+      "iteration": 3,
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "latency_ms": 1710.664,
+      "ttft_ms": 89.393,
+      "tokens_per_second": 92.238,
+      "output_tokens": 140,
+      "input_tokens": 46,
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "provenance": {
+        "latency_ms": "measured",
+        "ttft_ms": "measured",
+        "tokens_per_second": "derived",
+        "output_tokens": "measured"
+      }
+    },
+    {
+      "iteration": 4,
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "latency_ms": 1488.653,
+      "ttft_ms": 87.663,
+      "tokens_per_second": 92.959,
+      "output_tokens": 122,
+      "input_tokens": 46,
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "provenance": {
+        "latency_ms": "measured",
+        "ttft_ms": "measured",
+        "tokens_per_second": "derived",
+        "output_tokens": "measured"
+      }
+    },
+    {
+      "iteration": 5,
+      "provider": "ollama",
+      "model": "llama3.2:latest",
+      "latency_ms": 1482.361,
+      "ttft_ms": 87.558,
+      "tokens_per_second": 92.594,
+      "output_tokens": 121,
+      "input_tokens": 46,
+      "success": true,
+      "error_code": null,
+      "error_message": null,
+      "provenance": {
+        "latency_ms": "measured",
+        "ttft_ms": "measured",
+        "tokens_per_second": "derived",
+        "output_tokens": "measured"
+      }
+    }
+  ],
+  "readiness_score": 82,
+  "readiness_breakdown": {
+    "hardwareFit": 50,
+    "latencyScore": 72,
+    "privacyScore": 100,
+    "costScore": 100,
+    "reliabilityScore": 100
+  },
+  "recommendation": "Recommended on ollama: readiness 82/100 with a measured mean latency of 2758.887 ms and a 100% success rate.",
+  "evidence": [
+    "Measured 5/5 successful iterations of llama3.2:latest on ollama.",
+    "Wall-clock latency: mean 2758.887 ms, min 1482.361 ms, max 7570.614 ms (measured).",
+    "Median latency: 1542.145 ms (measured).",
+    "Time to first token: mean 1305.313 ms (measured from the streamed response).",
+    "Throughput: mean 91.347 tokens/second (derived from provider-reported token counts and measured duration).",
+    "Output tokens across the run: 623 (reported by the provider)."
+  ],
+  "assumptions": [
+    "Hardware fit is assumed to be 50/100. It is not measured by this module; device-aware scoring belongs to the device-profile work package.",
+    "Cost is assumed to be $0 per 1000 requests. No cost model has been measured, so the cost component of the readiness score carries no evidence.",
+    "The privacy score is assigned from the provider's deployment model (ollama), not from a review of the vendor's data-handling terms."
+  ],
+  "limitations": [
+    "Latency is measured from this server, so it includes network transit to the provider and is specific to this machine and connection."
+  ],
+  "terminal_error_code": null
+}

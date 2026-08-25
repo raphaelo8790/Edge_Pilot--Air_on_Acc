@@ -32,13 +32,10 @@ import {
 } from './helpers';
 
 const WORKLOAD_ID = '11111111-1111-4111-8111-111111111111';
-const DEVICE_ID = '22222222-2222-4222-8222-222222222222';
 const OWNER_ID = '33333333-3333-4333-8333-333333333333';
-const OTHER_OWNER_ID = '44444444-4444-4444-8444-444444444444';
 
 const REQUEST: BenchmarkRequest = {
   workload_id: WORKLOAD_ID,
-  device_id: DEVICE_ID,
   provider: 'ollama',
   model: 'llama3.2:1b',
   prompt: 'hi',
@@ -156,7 +153,6 @@ class InMemoryRepository implements BenchmarkRepository {
 
 interface ContextOptions {
   workloadUserId?: string | null;
-  deviceUserId?: string | null;
   providerId?: string | null;
   throws?: boolean;
 }
@@ -173,8 +169,6 @@ function contextGateway(options: ContextOptions = {}): BenchmarkContextGateway {
           options.workloadUserId === undefined
             ? OWNER_ID
             : options.workloadUserId,
-        deviceUserId:
-          options.deviceUserId === undefined ? OWNER_ID : options.deviceUserId,
       };
     },
     async resolveProviderId() {
@@ -238,11 +232,43 @@ describe('RunBenchmark — the happy path', () => {
     expect(run.readiness_score).not.toBeNull();
     expect(run.started_at).toBe('2026-01-01T00:00:00.000Z');
 
-    // Three iterations, one score, and the row closed out.
-    expect(repository.results).toHaveLength(3);
+    // Four rows: three measured iterations plus the discarded cold start,
+    // which is stored flagged rather than thrown away. One score, row closed.
+    expect(repository.results).toHaveLength(4);
     expect(repository.scores).toHaveLength(1);
     expect(repository.benchmarks[0].status).toBe('completed');
     expect(repository.benchmarks[0].completedAt).not.toBeNull();
+  });
+
+  it('makes one more call than requested and keeps the first out of the results', async () => {
+    const { useCase, repository } = harness();
+
+    const run = expectSuccess(await useCase.execute(REQUEST));
+
+    // REQUEST asks for 3. Four rows reached the database, so four calls were
+    // made - and only three of them are iterations the caller asked for.
+    expect(repository.results).toHaveLength(4);
+    expect(run.results).toHaveLength(3);
+    expect(run.results.map((r) => r.iteration)).toEqual([1, 2, 3]);
+    expect(run.summary.iterations_requested).toBe(3);
+    expect(run.summary.iterations_run).toBe(3);
+  });
+
+  it('stores the cold start flagged, at iteration 0, so no average can pick it up', async () => {
+    const { useCase, repository } = harness();
+
+    const run = expectSuccess(await useCase.execute(REQUEST));
+
+    const warmups = repository.results.filter((row) => row.warmup);
+    const measured = repository.results.filter((row) => !row.warmup);
+
+    expect(warmups).toHaveLength(1);
+    expect(warmups[0].iteration).toBe(0);
+    expect(measured).toHaveLength(3);
+    expect(measured.map((row) => row.iteration)).toEqual([1, 2, 3]);
+
+    expect(run.cold_start).not.toBeNull();
+    expect(run.cold_start!.note).toEqual(expect.any(String));
   });
 
   it('attributes the run to the workload owner, not to a placeholder', async () => {
@@ -300,37 +326,6 @@ describe('RunBenchmark — refusing before spending anything', () => {
     expect(outcome.status).toBe(404);
     expect(outcome.error).toBe('Workload not found');
     expect(providers[0].calls).toBe(0);
-  });
-
-  it('returns 404 for a device that does not exist', async () => {
-    const { useCase, providers } = harness({ deviceUserId: null });
-
-    const outcome = await useCase.execute(REQUEST);
-
-    expect(outcome.ok).toBe(false);
-    if (outcome.ok) return;
-
-    expect(outcome.status).toBe(404);
-    expect(outcome.error).toBe('Device not found');
-    expect(providers[0].calls).toBe(0);
-  });
-
-  it('returns 403 when the workload and the device have different owners', async () => {
-    // Ownership is derived from the workload, so a mismatched device would be
-    // silently attributed to the wrong user. Refuse instead.
-    const { useCase, providers, repository } = harness({
-      deviceUserId: OTHER_OWNER_ID,
-    });
-
-    const outcome = await useCase.execute(REQUEST);
-
-    expect(outcome.ok).toBe(false);
-    if (outcome.ok) return;
-
-    expect(outcome.status).toBe(403);
-    expect(outcome.error).toBe('Cross-owner request');
-    expect(providers[0].calls).toBe(0);
-    expect(repository.benchmarks).toHaveLength(0);
   });
 
   it('returns 404 with the seed command when the provider catalog is empty', async () => {

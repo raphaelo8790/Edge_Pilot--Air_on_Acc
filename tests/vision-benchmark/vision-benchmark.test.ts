@@ -127,7 +127,7 @@ describe('vision dataset manifest validation', () => {
       type: 'project_generated_synthetic',
       generator:
         'scripts/vision-benchmark/generate-fixtures.mjs',
-      repository: 'https://github.com/Ahmed-Sleem/edgepilot-ai',
+      repository: 'https://github.com/raphaelo8790/Edge_Pilot--Air_on_Acc',
       createdBy: 'EdgePilot AI contributors',
     },
     license: {

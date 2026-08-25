@@ -32,12 +32,10 @@ jest.mock('@/modules/benchmark/infrastructure/container', () => ({
 import { GET, POST } from '@/app/api/v1/benchmarks/route';
 
 const WORKLOAD_ID = '11111111-1111-4111-8111-111111111111';
-const DEVICE_ID = '22222222-2222-4222-8222-222222222222';
 const USER_ID = '33333333-3333-4333-8333-333333333333';
 
 const VALID_BODY = {
   workload_id: WORKLOAD_ID,
-  device_id: DEVICE_ID,
   provider: 'ollama',
   model: 'llama3.2:1b',
   prompt: 'hi',
@@ -67,6 +65,7 @@ function completedRun(overrides: Partial<BenchmarkRun> = {}): BenchmarkRun {
     fallback_chain: [],
     simulated: false,
     results: [],
+    cold_start: null,
     summary: {
       iterations_requested: 3,
       iterations_run: 3,

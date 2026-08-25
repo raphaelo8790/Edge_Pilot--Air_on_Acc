@@ -1,9 +1,8 @@
 /**
  * Prisma implementation of the narrow context lookup the benchmark use case
- * needs: who owns the workload, who owns the device, and what uuid the
- * provider slug maps to.
+ * needs: who owns the workload, and what uuid the provider slug maps to.
  *
- * Deliberately three tiny queries with `select` clauses rather than full row
+ * Deliberately two tiny queries with `select` clauses rather than full row
  * fetches — none of the other columns are needed, and the prompt column on a
  * workload can be large.
  */
@@ -15,24 +14,14 @@ export class PrismaBenchmarkContext implements BenchmarkContextGateway {
   constructor(private readonly client: PrismaClient) {}
 
   public async resolveContext(
-    workloadId: string,
-    deviceId: string
-  ): Promise<{ workloadUserId: string | null; deviceUserId: string | null }> {
-    const [workload, device] = await Promise.all([
-      this.client.workload.findUnique({
-        where: { id: workloadId },
-        select: { userId: true },
-      }),
-      this.client.device.findUnique({
-        where: { id: deviceId },
-        select: { userId: true },
-      }),
-    ]);
+    workloadId: string
+  ): Promise<{ workloadUserId: string | null }> {
+    const workload = await this.client.workload.findUnique({
+      where: { id: workloadId },
+      select: { userId: true },
+    });
 
-    return {
-      workloadUserId: workload?.userId ?? null,
-      deviceUserId: device?.userId ?? null,
-    };
+    return { workloadUserId: workload?.userId ?? null };
   }
 
   public async resolveProviderId(slug: string): Promise<string | null> {

@@ -35,7 +35,7 @@ any number you report.
 ## Clone and configure
 
 ```bash
-git clone https://github.com/Ahmed-Sleem/edgepilot-ai.git
+git clone https://github.com/raphaelo8790/Edge_Pilot--Air_on_Acc.git
 cd edgepilot-ai
 cp .env.example .env
 ```

@@ -8,6 +8,8 @@ It is not aimed at end users of the EdgePilot AI app.
 | [architecture.md](./architecture.md) | Hexagonal architecture, modules, data flow, schema notes |
 | [database.md](./database.md) | Local vs shared database, migrations, seeding, schema conventions |
 | [benchmark-api.md](./benchmark-api.md) | Wire contract for `/api/v1/benchmarks`, `/providers`, `/readiness/[id]` — request and response shapes, every status, the eight error codes |
+| [team-workflow.md](./team-workflow.md) | Branching, PRs, commits, review habits |
+| [project-plan.md](./project-plan.md) | Timeline / evaluation notes (if still relevant) |
 
 Benchmark and provider layer:
 
@@ -21,3 +23,5 @@ Public-facing entry points:
 
 - App story & user install → root [`README.md`](../../README.md)
 - External contribution guide → [`CONTRIBUTING.md`](../../CONTRIBUTING.md)
+
+**Note:** Team coordination happens in our Telegram group. No contact information is stored in the repository.

@@ -119,13 +119,22 @@ function IterationsTable({ rows }: { rows: MeasuredIteration[] }) {
 }
 
 function ReadinessBars({ readiness }: { readiness: ReadinessRecord }) {
-  const rows: Array<{ label: string; value: number }> = [
-    { label: "Hardware fit", value: readiness.hardwareFit },
-    { label: "Latency", value: readiness.latencyScore },
-    { label: "Privacy", value: readiness.privacyScore },
-    { label: "Cost", value: readiness.costScore },
-    { label: "Reliability", value: readiness.reliabilityScore },
-  ];
+  // Privacy is deliberately absent: it is an ordinal class, not a component
+  // of this score, and averaging it in would let throughput offset a data
+  // policy that should disqualify a provider outright. It is rendered
+  // separately as a class beside the score.
+  // A component that could not be assessed is omitted rather than drawn as an
+  // empty bar, which would read as "scored zero".
+  const rows = (
+    [
+      { label: "Hardware fit", value: readiness.hardwareFit },
+      { label: "Latency", value: readiness.latencyScore },
+      { label: "Cost", value: readiness.costScore },
+      { label: "Reliability", value: readiness.reliabilityScore },
+    ] as Array<{ label: string; value: number | null }>
+  ).filter(
+    (row): row is { label: string; value: number } => row.value !== null
+  );
   return (
     <div>
       {rows.map((r) => (
@@ -266,10 +275,56 @@ export function RunResults({ run, onRunAnother, onStartOver }: Props) {
             TTFT mean {fmtMs(s.ttft_ms_mean)}
           </p>
         </div>
+        <div className="stat">
+          <p className="stat-label">Cold start</p>
+          <p className="stat-value">
+            {run.cold_start === null ? "—" : fmtMs(run.cold_start.latency_ms)}
+          </p>
+          <p className="stat-sub">
+            {run.cold_start === null
+              ? "nothing ran"
+              : run.cold_start.model_was_resident_before === false
+                ? "loaded from disk · not counted above"
+                : run.cold_start.model_was_resident_before === true
+                  ? "already loaded · not counted above"
+                  : "residency unknown · not counted above"}
+          </p>
+        </div>
       </div>
 
       <h3>Per-iteration evidence</h3>
       <IterationsTable rows={run.results} />
+
+      <h3>Cold start — measured, not counted</h3>
+      {run.cold_start === null ? (
+        <p className="card-sub">
+          No cold-start figure: nothing ran, so there was no first call to
+          discard.
+        </p>
+      ) : !run.cold_start.success ? (
+        <div className="callout callout-warn" role="note">
+          <strong>The discarded first call failed.</strong> It took{" "}
+          {fmtMs(run.cold_start.latency_ms)} to fail. The measured iterations
+          above are unaffected — this call was never part of them.
+        </div>
+      ) : (
+        <div className="callout" role="note">
+          <strong style={{ fontSize: 16 }}>
+            {fmtMs(run.cold_start.latency_ms)}
+            {run.cold_start.ttft_ms !== null
+              ? ` · ${fmtMs(run.cold_start.ttft_ms)} to first token`
+              : ""}
+          </strong>
+          <p style={{ margin: "6px 0 0" }}>{run.cold_start.note}</p>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+            Every run makes one more call than you asked for and throws the
+            first away, so the averages above describe how the model answers
+            rather than how long it took to load. This figure is kept because
+            “how long until it is usable” is a real question — it is just a
+            different one.
+          </p>
+        </div>
+      )}
 
       <h3>Readiness</h3>
       {run.readiness_score === null ? (

@@ -23,6 +23,8 @@ export const BENCHMARK_ENV_KEYS = [
   'BENCHMARK_TIMEOUT_MS',
   'BENCHMARK_FALLBACK_ORDER',
   'BENCHMARK_ALLOW_DEMO',
+  'GEMINI_TIER',
+  'GROQ_TIER',
 ] as const;
 
 /**
@@ -66,11 +68,46 @@ export interface BenchmarkConfig {
    * for, so a real deployment cannot silently answer with fake numbers.
    */
   allowDemo: boolean;
+  /**
+   * Billing tier per provider slug, as DECLARED by the operator. No inference
+   * API reports it, and free and paid tiers commonly differ on retention and
+   * training-on-input, so privacy cannot be assessed accurately without it.
+   * Unrecognised or absent values become 'unknown', which the assessment then
+   * reports as a limitation rather than silently assuming.
+   */
+  providerTiers: Record<string, 'free' | 'paid' | 'unknown'>;
   /** Variables that were read but were not usable, for the docs and the API. */
   warnings: string[];
 }
 
 const DEFAULT_FALLBACK_ORDER = ['ollama', 'groq', 'gemini'];
+
+/**
+ * Reads a declared billing tier. Anything unrecognised becomes 'unknown' and
+ * raises a warning, rather than being guessed at - an assessment built on the
+ * wrong tier is worse than one that says it does not know.
+ */
+function readTier(
+  raw: string | undefined,
+  key: string,
+  warnings: string[]
+): 'free' | 'paid' | 'unknown' {
+  const value = (raw ?? '').trim().toLowerCase();
+
+  if (value === '') {
+    return 'unknown';
+  }
+
+  if (value === 'free' || value === 'paid') {
+    return value;
+  }
+
+  warnings.push(
+    `${key}="${raw}" is not one of "free" or "paid"; the tier is treated as unknown and the privacy assessment will say so.`
+  );
+
+  return 'unknown';
+}
 
 /**
  * What this function needs from an environment: string values by name, some of
@@ -137,6 +174,10 @@ export function loadBenchmarkConfig(
     timeoutMs,
     fallbackOrder,
     allowDemo: (environment.BENCHMARK_ALLOW_DEMO ?? '').trim() === 'true',
+    providerTiers: {
+      gemini: readTier(environment.GEMINI_TIER, 'GEMINI_TIER', warnings),
+      groq: readTier(environment.GROQ_TIER, 'GROQ_TIER', warnings),
+    },
     warnings,
   };
 }

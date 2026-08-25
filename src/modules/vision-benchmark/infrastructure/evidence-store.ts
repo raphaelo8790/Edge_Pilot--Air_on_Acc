@@ -13,7 +13,14 @@ const SAFE_EVIDENCE_FILENAME = /^[a-z0-9._-]+\.json$/;
 function defaultEvidenceFileName(
   evidence: VisionBenchmarkEvidence
 ): string {
-  const timestamp = evidence.completedAt.replace(/[:.]/g, '-');
+  // Lowercased because SAFE_EVIDENCE_FILENAME accepts [a-z0-9._-] only, and
+  // an ISO timestamp carries an uppercase T and Z. Without this, save() threw
+  // "The evidence filename is not safe" on every run that did not pass a
+  // filename by hand - which is every live run. The controlled generator
+  // passes 'controlled-ollama.json' explicitly, so the fixtures hid the bug.
+  const timestamp = evidence.completedAt
+    .replace(/[:.]/g, '-')
+    .toLowerCase();
   const provider = evidence.provider
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-');

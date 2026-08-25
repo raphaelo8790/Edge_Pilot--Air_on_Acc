@@ -69,3 +69,26 @@ temp/
 # which is the automatic record of a clean-environment start and has to be
 # reviewable in the pull request.
 !/evidence/benchmark/*.log
+
+# Working backups. A `.bak` beside a source file is a scratch copy from an
+# editing session, not a deliverable - committing one puts a stale duplicate of
+# real code in the tree where a reviewer will read it as current.
+*.bak
+
+# --- Deliberate exceptions ---------------------------------------------------
+#
+# Kept deliberately, against the two rules above.
+#
+# 1. The reference vision measurement. Live runs are ignored by default because
+#    they are machine-specific and would otherwise accumulate from every
+#    developer. This one is the first real measurement the project produced -
+#    llava at 66.7% accuracy, failing its own 0.8 gate, with hardhats read as
+#    safety cones - and the acceptance criteria ask for evidence a reviewer can
+#    read without running anything. Regenerate a comparable one with:
+#      node --import tsx scripts/vision-benchmark/run.ts --provider=ollama --model=llava:latest
+!/evidence/vision-benchmark/live-ollama-llava-latest-2026-08-23t20-03-01-476z.json
+#
+# 2. The original workloads scaffold. It is referenced BY NAME in the docblock
+#    of route.ts as the thing that endpoint replaced, so a reader following
+#    that reference needs it to exist.
+!/src/app/api/v1/workloads/route.ts.scaffold.bak

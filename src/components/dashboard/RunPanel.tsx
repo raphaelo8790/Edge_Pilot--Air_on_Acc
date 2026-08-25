@@ -11,10 +11,15 @@
  */
 import { useEffect, useId, useRef, useState } from "react";
 
-import benchmarkTasks from "@/data/benchmark-tasks.json";
+import benchmarkTasks from "../../../benchmark-tasks.json";
 import { runBenchmark, type ApiFailure, type BenchmarkRun } from "./api";
 import { fmtElapsed } from "./format";
 import { ErrorState } from "./StateViews";
+import {
+  describeEgressWarning,
+  type EgressWarning,
+} from "@/modules/benchmark/core/services/egress-warning";
+import { getProviders, type ProviderCatalogEntry } from "./api";
 
 interface TaskEntry {
   id: number;
@@ -50,7 +55,6 @@ const TASK_PROMPTS: Record<string, string> = {
 
 interface Props {
   workloadId: string;
-  deviceId: string;
   provider: string;
   model: string;
   onComplete: (run: BenchmarkRun) => void;
@@ -59,7 +63,6 @@ interface Props {
 
 export function RunPanel({
   workloadId,
-  deviceId,
   provider,
   model,
   onComplete,
@@ -75,6 +78,26 @@ export function RunPanel({
   const [elapsed, setElapsed] = useState(0);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // The catalog is fetched here rather than threaded down, because the warning
+  // needs the provider's ENDPOINT - "is this leaving the machine" is a fact
+  // about the URL, not about the provider's name.
+  const [catalog, setCatalog] = useState<ProviderCatalogEntry[]>([]);
+  const [pendingWarning, setPendingWarning] = useState<EgressWarning | null>(
+    null,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getProviders().then((res) => {
+      if (!cancelled && res.ok) setCatalog(res.data);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -93,8 +116,37 @@ export function RunPanel({
       ? "Iterations must be a whole number between 1 and 100."
       : null;
 
+  /**
+   * Nothing is sent from here.
+   *
+   * A prompt that leaves the machine cannot be recalled, so the decision to
+   * send it belongs to the person who wrote it, taken while looking at where
+   * it is going. A local run shows no dialog at all - interrupting someone to
+   * confirm that nothing is leaving their own computer would train them to
+   * click through the one that matters.
+   */
+  const requestRun = () => {
+    if (promptError || iterError) return;
+
+    const entry = catalog.find((p) => p.name === provider) ?? null;
+    const warning = describeEgressWarning(
+      entry?.base_url ?? null,
+      entry?.display_name ?? provider,
+      entry?.type === "local" ? "local" : "unknown",
+      prompt,
+    );
+
+    if (warning.required) {
+      setPendingWarning(warning);
+      return;
+    }
+
+    void run();
+  };
+
   const run = async () => {
     if (promptError || iterError) return;
+    setPendingWarning(null);
     setRunning(true);
     setFailure(null);
     setElapsed(0);
@@ -102,7 +154,6 @@ export function RunPanel({
 
     const res = await runBenchmark({
       workload_id: workloadId,
-      device_id: deviceId,
       provider: provider as "ollama" | "gemini" | "groq",
       model,
       prompt,
@@ -131,14 +182,59 @@ export function RunPanel({
         iteration is recorded with its provenance.
       </p>
 
+      {pendingWarning ? (
+        <div
+          className="egress-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="egress-title"
+        >
+          <div className="egress-dialog">
+            <h3 id="egress-title" style={{ marginTop: 0 }}>
+              {pendingWarning.title}
+            </h3>
+            <p>{pendingWarning.detail}</p>
+
+            <ul className="list">
+              {pendingWarning.points.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+
+            {/*
+              The prompt itself, because "are you sure you want to send this"
+              is not a question anyone can answer without seeing THIS. Shown
+              in full up to a limit rather than summarised - a summary is
+              exactly where the sentence you forgot you pasted would hide.
+            */}
+            <p style={{ marginBottom: 4, fontSize: 12, color: "var(--text-muted)" }}>
+              What will be sent, {iterations + 1} times:
+            </p>
+            <pre className="egress-prompt">
+              {prompt.length > 1200 ? `${prompt.slice(0, 1200)}…` : prompt}
+            </pre>
+
+            <div className="btn-row">
+              <button className="btn" onClick={() => setPendingWarning(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={() => void run()}>
+                {pendingWarning.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {running ? (
         <div className="state-panel" role="status" aria-live="polite">
           <span className="spinner" aria-hidden="true" />
           <p className="state-title">Benchmark running… {fmtElapsed(elapsed)}</p>
           <p className="state-detail">
-            {iterations} iteration{iterations > 1 ? "s" : ""} of real inference
-            against {provider}. Long runs are normal — up to the server’s
-            per-request timeout per iteration. Leave this tab open.
+            {iterations + 1} calls against {provider} — {iterations} measured
+            iteration{iterations > 1 ? "s" : ""} plus one discarded cold start.
+            Long runs are normal — a model that is not loaded yet can spend a
+            minute or more on that first call. Leave this tab open.
           </p>
         </div>
       ) : (
@@ -165,7 +261,12 @@ export function RunPanel({
             </div>
             <div className="field">
               <label htmlFor={`${id}-iter`}>Iterations (1–100)</label>
-              <p className="hint">More iterations → better medians, longer run.</p>
+              <p className="hint">
+                More iterations → better medians, longer run.{" "}
+                <strong>{iterations + 1} calls will be made:</strong> the first
+                is discarded because it pays for loading the model, and counting
+                it would describe the load rather than the model.
+              </p>
               <input
                 id={`${id}-iter`}
                 type="number"
@@ -201,7 +302,7 @@ export function RunPanel({
             </button>
             <button
               className="btn btn-primary"
-              onClick={run}
+              onClick={requestRun}
               disabled={Boolean(promptError || iterError)}
             >
               Run benchmark

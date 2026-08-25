@@ -30,8 +30,13 @@ docs
 npm-debug.log*
 
 # Local-only files.
+#
+# benchmark-tasks.json is NOT here on purpose. RunPanel.tsx imports it
+# directly ("../../../benchmark-tasks.json"), so it is a build input: excluding
+# it from the build context makes `next build` fail inside the image on module
+# resolution while working perfectly on a developer's machine, where the file
+# is simply present. device-profile.json has no importer and stays excluded.
 device-profile.json
-benchmark-tasks.json
 Dockerfile
 docker-compose.yml
 README.md

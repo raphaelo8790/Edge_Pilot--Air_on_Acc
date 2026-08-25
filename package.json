@@ -17,6 +17,7 @@
     "vision:evidence:controlled": "node --import tsx scripts/vision-benchmark/generate-controlled-evidence.ts",
     "vision:run:ollama": "node --import tsx scripts/vision-benchmark/run.ts --provider=ollama",
     "vision:run:gemini": "node --import tsx scripts/vision-benchmark/run.ts --provider=gemini",
+    "eval:matrix": "node --import tsx scripts/evaluation/ten-case-matrix.ts",
     "bench:evidence:failures": "node --import tsx scripts/benchmark/capture-failure-evidence.ts",
     "bench:run": "node --import tsx scripts/benchmark/run-benchmark.ts",
     "bench:clean-start": "node --import tsx scripts/benchmark/capture-clean-start.ts",
@@ -27,9 +28,11 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset",
-    "db:neon:deploy": "dotenv -e .env.neon -- prisma migrate deploy",
-    "db:neon:seed": "dotenv -e .env.neon -- prisma db seed",
-    "db:neon:studio": "dotenv -e .env.neon -- prisma studio"
+    "db:neon:deploy": "node scripts/db/neon.mjs migrate deploy",
+    "db:neon:seed": "node scripts/db/neon.mjs db seed",
+    "db:neon:studio": "node scripts/db/neon.mjs studio",
+    "db:neon": "node scripts/db/neon.mjs",
+    "db:neon:status": "node scripts/db/neon.mjs migrate status"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
@@ -44,7 +47,7 @@
     "groq-sdk": "^0.5.0",
     "lucide-react": "0.475.0",
     "next": "^16.0.0",
-    "next-auth": "^4.24.15",
+    "next-auth": "^4.24.0",
     "nuqs": "2.9.1",
     "ollama": "^0.5.0",
     "react": "^19.0.0",
@@ -53,7 +56,6 @@
     "recharts": "^2.10.0",
     "sharp": "0.35.3",
     "tailwind-merge": "^2.0.0",
-    "uuid": "^14.0.1",
     "zod": "^3.22.0",
     "zustand": "^4.0.0"
   },
@@ -67,7 +69,6 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.0.0",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.5",
@@ -86,5 +87,6 @@
   "overrides": {
     "sharp": "0.35.3",
     "postcss": "8.5.22"
-  }
+  },
+  "license": "AGPL-3.0-or-later"
 }

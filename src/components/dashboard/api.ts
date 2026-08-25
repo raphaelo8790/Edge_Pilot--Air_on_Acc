@@ -18,6 +18,15 @@ import type {
   BenchmarkRun,
 } from "@/modules/benchmark/application/dtos/BenchmarkMeasurement";
 import type { BenchmarkRequest } from "@/modules/benchmark/application/dtos/BenchmarkRequest";
+import { getSessionId } from "./session";
+
+/**
+ * Must match SESSION_HEADER in src/core/logging/sessionLogStore.ts. It is
+ * written out rather than imported: that module instantiates the in-memory
+ * log store at module scope, so importing it here would pull server-side
+ * state into the browser bundle.
+ */
+const SESSION_HEADER = "x-edgepilot-session";
 
 // ---------------------------------------------------------------------------
 // Wire shapes not exported by other modules (documented in benchmark-api.md)
@@ -47,9 +56,13 @@ export interface ProvidersMeta {
 
 /** GET /api/v1/readiness/[id] — camelCase, with ASSUMPTION: lines split out. */
 export interface ReadinessRecord {
-  hardwareFit: number;
+  /** Null when hardware fit could not be assessed. */
+  hardwareFit: number | null;
   latencyScore: number;
-  privacyScore: number;
+  /** Null for runs scored after privacy became a class. */
+  privacyScore: number | null;
+  /** Ordinal privacy class, e.g. "on-device". Null on historic rows. */
+  privacyClass: string | null;
   costScore: number;
   reliabilityScore: number;
   overallReadiness: number;
@@ -57,6 +70,35 @@ export interface ReadinessRecord {
   evidence: string[];
   limitations: string[];
   assumptions: string[];
+}
+
+/** One model installed on the machine running Ollama. */
+export interface LocalModel {
+  name: string;
+  size_bytes: number | null;
+  parameter_size: string | null;
+  quantization: string | null;
+  families: string[];
+  modality: "text" | "vision" | "embedding";
+  modality_confidence: "reported" | "inferred";
+  modality_reason: string;
+}
+
+export interface LocalRuntime {
+  provider: string;
+  state:
+    | "ready"
+    | "reachable-no-models"
+    | "unreachable"
+    | "bad-host"
+    | "not-configured";
+  ok: boolean;
+  host: string | null;
+  version: string | null;
+  message: string;
+  remedy: string | null;
+  model_count: number;
+  models: LocalModel[];
 }
 
 export interface CreateWorkloadInput {
@@ -68,15 +110,6 @@ export interface CreateWorkloadInput {
   input_format: string;
   output_format: string;
   constraints: Record<string, unknown>;
-}
-
-export interface CreateDeviceInput {
-  name: string;
-  cpu: string;
-  ram_gb: number;
-  gpu: string | null;
-  storage_gb: number;
-  network: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,11 +140,21 @@ async function call<T>(
   path: string,
   init?: RequestInit,
 ): Promise<ApiOutcome<T>> {
+  const sessionId = getSessionId();
+
   let res: Response;
   try {
     res = await fetch(`/api/v1${path}`, {
       ...init,
-      headers: { "content-type": "application/json", ...init?.headers },
+      headers: {
+        "content-type": "application/json",
+        // Every call carries the browser's own id. This is what makes rows
+        // created here belong to this visitor instead of to a shared
+        // sandbox user, and it is why no component ever handles a uuid.
+        // Omitted during server rendering, where there is no identity.
+        ...(sessionId === null ? {} : { [SESSION_HEADER]: sessionId }),
+        ...init?.headers,
+      },
       cache: "no-store",
     });
   } catch {
@@ -161,19 +204,16 @@ async function call<T>(
 // Endpoints
 // ---------------------------------------------------------------------------
 
+export function getLocalRuntime() {
+  return call<LocalRuntime>("/local-runtime");
+}
+
 export function getProviders() {
   return call<ProviderCatalogEntry[]>("/providers");
 }
 
 export function createWorkload(input: CreateWorkloadInput) {
   return call<{ workload_id: string } & CreateWorkloadInput>("/workloads", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
-export function createDevice(input: CreateDeviceInput) {
-  return call<{ device_id: string } & CreateDeviceInput>("/devices", {
     method: "POST",
     body: JSON.stringify(input),
   });

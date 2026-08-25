@@ -28,7 +28,7 @@ export function fmtPct(value: number | null | undefined): string {
   return `${Math.round(value)}%`;
 }
 
-/** RFC-4122-shaped uuid check — the API validates workload/device/benchmark ids as uuids. */
+/** RFC-4122-shaped uuid check — the API validates workload and benchmark ids as uuids. */
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     value.trim(),
@@ -36,9 +36,15 @@ export function isUuid(value: string): boolean {
 }
 
 /**
- * The scaffold endpoints for workloads/devices echo placeholder ids
- * ("temp-workload-id") instead of persisting. Detecting that is how the UI
- * tells the user their row was NOT saved rather than pretending it was.
+ * True when an id is not a real database uuid.
+ *
+ * HISTORICAL. The workloads and devices endpoints once echoed placeholder ids
+ * ("temp-workload-id") instead of persisting, and the dashboard used this to
+ * tell the user their row was NOT saved rather than pretending it was. Both
+ * endpoints persist now and SetupPanel checks isUuid directly, so nothing in
+ * the UI calls this any more. It is kept because it has a test, and because a
+ * regression to placeholder ids is exactly the thing worth still being able
+ * to name.
  */
 export function isPlaceholderId(id: string): boolean {
   return !isUuid(id);

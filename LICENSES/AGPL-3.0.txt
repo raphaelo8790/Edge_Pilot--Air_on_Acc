@@ -1,0 +1,18 @@
+PLACEHOLDER - REPLACE BEFORE PUBLISHING
+=======================================
+
+The full text of the GNU Affero General Public License v3.0 belongs here.
+It was deliberately not written from memory: a licence is only enforceable
+if its wording is exact.
+
+Fetch the authoritative copy from the Free Software Foundation:
+
+    curl -L -o LICENSES/AGPL-3.0.txt https://www.gnu.org/licenses/agpl-3.0.txt
+
+or download https://www.gnu.org/licenses/agpl-3.0.txt in a browser and save it
+over this file. Verify it begins with:
+
+    GNU AFFERO GENERAL PUBLIC LICENSE
+    Version 3, 19 November 2007
+
+and ends with the "How to Apply These Terms to Your New Programs" section.

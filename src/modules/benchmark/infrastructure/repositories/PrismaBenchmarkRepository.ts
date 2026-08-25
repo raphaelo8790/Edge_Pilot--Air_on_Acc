@@ -35,7 +35,6 @@ function toStringArray(value: unknown): string[] {
 function toBenchmark(row: {
   id: string;
   workloadId: string;
-  deviceId: string;
   providerId: string;
   model: string;
   prompt: string;
@@ -48,7 +47,6 @@ function toBenchmark(row: {
   return {
     id: row.id,
     workloadId: row.workloadId,
-    deviceId: row.deviceId,
     providerId: row.providerId,
     model: row.model,
     prompt: row.prompt,
@@ -69,7 +67,6 @@ export class PrismaBenchmarkRepository implements BenchmarkRepository {
     const row = await this.client.benchmark.create({
       data: {
         workloadId: benchmark.workloadId,
-        deviceId: benchmark.deviceId,
         providerId: benchmark.providerId,
         model: benchmark.model,
         prompt: benchmark.prompt,
@@ -131,6 +128,7 @@ export class PrismaBenchmarkRepository implements BenchmarkRepository {
         ttftMs: result.ttftMs,
         success: result.success,
         errorMessage: result.errorMessage,
+        warmup: result.warmup,
       },
     });
 
@@ -159,6 +157,7 @@ export class PrismaBenchmarkRepository implements BenchmarkRepository {
         ttftMs: result.ttftMs,
         success: result.success,
         errorMessage: result.errorMessage,
+        warmup: result.warmup,
       })),
     });
 
@@ -182,9 +181,12 @@ export class PrismaBenchmarkRepository implements BenchmarkRepository {
       where: { benchmarkId: score.benchmarkId },
       create: {
         benchmarkId: score.benchmarkId,
-        hardwareFit: Math.round(score.hardwareFit),
+        hardwareFit:
+          score.hardwareFit === null ? null : Math.round(score.hardwareFit),
         latencyScore: Math.round(score.latencyScore),
-        privacyScore: Math.round(score.privacyScore),
+        privacyScore:
+          score.privacyScore === null ? null : Math.round(score.privacyScore),
+        privacyClass: score.privacyClass,
         costScore: Math.round(score.costScore),
         reliabilityScore: Math.round(score.reliabilityScore),
         overallReadiness: Math.round(score.overallReadiness),
@@ -193,9 +195,12 @@ export class PrismaBenchmarkRepository implements BenchmarkRepository {
         limitations: score.limitations,
       },
       update: {
-        hardwareFit: Math.round(score.hardwareFit),
+        hardwareFit:
+          score.hardwareFit === null ? null : Math.round(score.hardwareFit),
         latencyScore: Math.round(score.latencyScore),
-        privacyScore: Math.round(score.privacyScore),
+        privacyScore:
+          score.privacyScore === null ? null : Math.round(score.privacyScore),
+        privacyClass: score.privacyClass,
         costScore: Math.round(score.costScore),
         reliabilityScore: Math.round(score.reliabilityScore),
         overallReadiness: Math.round(score.overallReadiness),

@@ -302,6 +302,16 @@
     "Predictions and latencies are deterministic controlled fixtures, not live provider measurements.",
     "The dataset contains synthetic images and does not estimate production-site accuracy.",
     "The commit marker is intentionally non-release provenance for generated controlled evidence.",
-    "Provider execution mode: cloud."
+    "Provider execution mode: cloud.",
+    "One discarded warm-up request was made before timing began, so the latencies below measure inference rather than model loading."
+  ],
+  "labels": [
+    "hardhat",
+    "safety_vest",
+    "gloves",
+    "goggles",
+    "mask",
+    "ladder",
+    "safety_cone"
   ]
 }

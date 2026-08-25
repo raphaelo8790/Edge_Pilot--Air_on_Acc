@@ -5,13 +5,18 @@
  * Two decisions in here are worth reading before changing anything.
  *
  * 1. WHERE `userId` COMES FROM.
- *    The original scaffold left `const userId = 'temp-user-id'` behind a
- *    "get user from session" TODO, which cannot be written until session
- *    handling exists — and that belongs to the integration work package, not
- *    this one. Rather than block, ownership is derived from the workload the
- *    request already names: `workloads.user_id` is required and the benchmark
- *    is about that workload. This is an interim attribution rule, documented
- *    as a limitation, and it is deleted the day a session is available.
+ *    Ownership is derived from the workload the request names:
+ *    `workloads.user_id` is required and the benchmark is about that
+ *    workload. This began as an interim rule while there was no session, and
+ *    survives now that there is one because it is still the right answer — a
+ *    benchmark belongs to whoever owns the thing being benchmarked, and the
+ *    workload row is already owned by the session that created it.
+ *
+ *    This used to also resolve a device row and refuse the request when the
+ *    workload and the device had different owners. Devices are gone: the row
+ *    carried nothing any measurement read, and the hand-typed specifications
+ *    behind it were never an input to anything. Placement now comes from
+ *    what the runtime actually reports. See HardwareFitAssessor.
  *
  * 2. WHY A DATABASE FAILURE DOES NOT LOSE THE RUN.
  *    The measurement is the expensive part and it has already happened by the
@@ -34,17 +39,9 @@ import { providerErrorStatus } from '../../infrastructure/providers/errors';
  * as a narrow port so the use case can be tested without a database.
  */
 export interface BenchmarkContextGateway {
-  /**
-   * The owner of the workload, or null when the workload does not exist.
-   * Also confirms the device exists and reports its owner, so a request
-   * cannot benchmark one user's workload against another user's device.
-   */
-  resolveContext(
-    workloadId: string,
-    deviceId: string
-  ): Promise<{
+  /** The owner of the workload, or null when the workload does not exist. */
+  resolveContext(workloadId: string): Promise<{
     workloadUserId: string | null;
-    deviceUserId: string | null;
   }>;
 
   /** providers.id for a slug, or null when the catalog has no such row. */
@@ -98,17 +95,11 @@ export class RunBenchmark {
     // A request naming a workload that does not exist is a client error, and
     // finding that out after spending sixty seconds on inference would be
     // both slow and confusing.
-    let context: {
-      workloadUserId: string | null;
-      deviceUserId: string | null;
-    };
+    let context: { workloadUserId: string | null };
     let providerId: string | null;
 
     try {
-      context = await this.context.resolveContext(
-        request.workload_id,
-        request.device_id
-      );
+      context = await this.context.resolveContext(request.workload_id);
       providerId = await this.context.resolveProviderId(request.provider);
     } catch (error) {
       return {
@@ -116,7 +107,7 @@ export class RunBenchmark {
         status: 503,
         error: 'Database unavailable',
         detail:
-          'Could not read the workload, device or provider catalog. ' +
+          'Could not read the workload or provider catalog. ' +
           describeError(error),
       };
     }
@@ -127,27 +118,6 @@ export class RunBenchmark {
         status: 404,
         error: 'Workload not found',
         detail: `No workload with id ${request.workload_id}.`,
-      };
-    }
-
-    if (context.deviceUserId === null) {
-      return {
-        ok: false,
-        status: 404,
-        error: 'Device not found',
-        detail: `No device with id ${request.device_id}.`,
-      };
-    }
-
-    if (context.deviceUserId !== context.workloadUserId) {
-      return {
-        ok: false,
-        status: 403,
-        error: 'Cross-owner request',
-        detail:
-          'The workload and the device belong to different users. Until session ' +
-          'handling lands, ownership is derived from the workload, so this ' +
-          'request is refused rather than attributed to the wrong user.',
       };
     }
 
@@ -168,7 +138,6 @@ export class RunBenchmark {
     try {
       const created = await this.repository.create({
         workloadId: request.workload_id,
-        deviceId: request.device_id,
         providerId,
         model: request.model,
         prompt: request.prompt,
@@ -202,6 +171,23 @@ export class RunBenchmark {
 
     if (benchmarkId !== null) {
       try {
+        // The discarded first call is stored too, flagged, at iteration 0.
+        // It is evidence - "this model takes 36 s to become usable" is worth
+        // reading back later - but the flag is what keeps it out of anything
+        // that averages.
+        if (outcome.coldStart !== null) {
+          await this.repository.addResult({
+            benchmarkId,
+            iteration: 0,
+            latencyMs: outcome.coldStart.latency_ms,
+            tokensPerSecond: null,
+            ttftMs: outcome.coldStart.ttft_ms,
+            success: outcome.coldStart.success,
+            errorMessage: null,
+            warmup: true,
+          });
+        }
+
         for (let index = 0; index < outcome.results.length; index += 1) {
           const result = outcome.results[index];
 
@@ -213,6 +199,7 @@ export class RunBenchmark {
             ttftMs: result.ttft_ms,
             success: result.success,
             errorMessage: result.error_message,
+            warmup: false,
           });
         }
 
@@ -224,7 +211,11 @@ export class RunBenchmark {
             benchmarkId,
             hardwareFit: outcome.readinessBreakdown.hardwareFit,
             latencyScore: outcome.readinessBreakdown.latencyScore,
-            privacyScore: outcome.readinessBreakdown.privacyScore,
+            // Privacy is no longer a component of the score. The class is
+            // recorded alongside it so a row read back later still says what
+            // happened to the content.
+            privacyScore: null,
+            privacyClass: outcome.privacy?.privacyClass ?? null,
             costScore: outcome.readinessBreakdown.costScore,
             reliabilityScore: outcome.readinessBreakdown.reliabilityScore,
             overallReadiness: outcome.readinessScore,
@@ -277,6 +268,7 @@ export class RunBenchmark {
       fallback_chain: outcome.fallbackChain,
       simulated: outcome.simulated,
       results: outcome.results,
+      cold_start: outcome.coldStart,
       summary: outcome.summary,
       readiness_score: outcome.readinessScore,
       recommendation: outcome.recommendation,

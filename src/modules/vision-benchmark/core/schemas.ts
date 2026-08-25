@@ -15,9 +15,12 @@ export const VisionLabelSchema = z.enum(VISION_LABELS);
 export const VisionBenchmarkSampleSchema = z.object({
   id: z.string().min(1).max(120),
   imagePath: z.string().min(1).max(500),
-  expectedLabel: VisionLabelSchema,
+  // Dataset-defined. Was z.enum(VISION_LABELS), which made every dataset a
+  // construction-safety dataset.
+  expectedLabel: z.string().min(1),
   sourceId: z.string().min(1).max(120),
-  licenseSpdx: z.literal('MIT'),
+  // An SPDX identifier the uploader declares. Was z.literal('MIT').
+  licenseSpdx: z.string().min(1),
   licenseVerified: z.literal(true),
   privacyReviewed: z.literal(true),
   containsPeople: z.literal(false),
@@ -116,9 +119,11 @@ export const VisionBenchmarkThresholdsSchema = z.object({
 
 export const VisionPredictionRecordSchema = z.object({
   sampleId: z.string().min(1),
-  expectedLabel: VisionLabelSchema,
+  // Dataset-defined. Was z.enum(VISION_LABELS), which made every dataset a
+  // construction-safety dataset.
+  expectedLabel: z.string().min(1),
   rawOutput: z.string(),
-  normalizedLabel: VisionLabelSchema.nullable(),
+  normalizedLabel: z.string().min(1).nullable(),
   latencyMs: NonNegativeFiniteNumberSchema,
   providerSuccess: z.boolean(),
   errorCategory: z
@@ -127,7 +132,7 @@ export const VisionPredictionRecordSchema = z.object({
 });
 
 export const VisionClassMetricsSchema = z.object({
-  label: VisionLabelSchema,
+  label: z.string().min(1),
   truePositive: z.number().int().nonnegative(),
   falsePositive: z.number().int().nonnegative(),
   falseNegative: z.number().int().nonnegative(),
@@ -149,17 +154,23 @@ export const VisionAggregateMetricsSchema = z.object({
   medianLatencyMs: NonNegativeFiniteNumberSchema,
   p95LatencyMs: NonNegativeFiniteNumberSchema,
   throughputSamplesPerSecond: NonNegativeFiniteNumberSchema,
-  perClass: z
-    .array(VisionClassMetricsSchema)
-    .length(VISION_LABELS.length),
+  // One entry per class the DATASET declares, not exactly seven. This used to
+  // be .length(VISION_LABELS.length), which meant any dataset with a different
+  // number of classes produced metrics its own schema rejected - the run
+  // completed, every image was classified, and the result was thrown away at
+  // validation. min(1) because a benchmark with no classes is meaningless.
+  perClass: z.array(VisionClassMetricsSchema).min(1),
 });
 
 export const VisionBenchmarkEvidenceSchema = z
   .object({
     schemaVersion: z.literal('1.0.0'),
-    workloadId: z.literal(VISION_WORKLOAD_ID),
+    // Widened from literals: evidence can now come from a dataset the user
+    // brought, which names itself. The shipped manifest still validates
+    // against its own literals above.
+    workloadId: z.string().min(1),
     workloadVersion: z.string().min(1),
-    datasetId: z.literal(VISION_DATASET_ID),
+    datasetId: z.string().min(1),
     manifestVersion: z.string().min(1),
     manifestSha256: Sha256Schema,
     preprocessingVersion: z.string().min(1),
@@ -177,6 +188,10 @@ export const VisionBenchmarkEvidenceSchema = z
     thresholds: VisionBenchmarkThresholdsSchema,
     passed: z.boolean(),
     limitations: z.array(z.string().min(1)),
+    // Optional on purpose: evidence written before datasets could define
+    // their own classes has no such field, and must keep parsing. Readers
+    // fall back to VISION_LABELS.
+    labels: z.array(z.string().min(1)).min(1).optional(),
   })
   .superRefine((evidence, context) => {
     if (evidence.records.length !== evidence.metrics.totalSamples) {
@@ -235,8 +250,8 @@ export const VisionBenchmarkRunRequestSchema = z.object({
 });
 
 export const VisionDashboardRowSchema = z.object({
-  workloadId: z.literal(VISION_WORKLOAD_ID),
-  datasetId: z.literal(VISION_DATASET_ID),
+  workloadId: z.string().min(1),
+  datasetId: z.string().min(1),
   provider: z.string().min(1),
   providerKind: z.enum(['local', 'cloud']),
   model: z.string().min(1),

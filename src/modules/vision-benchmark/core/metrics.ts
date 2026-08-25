@@ -2,7 +2,6 @@ import {
   ClassMetrics,
   VISION_LABELS,
   VisionAggregateMetrics,
-  VisionLabel,
   VisionPredictionRecord,
 } from './types';
 
@@ -47,7 +46,7 @@ function nearestRankPercentile(
 
 function calculateClassMetrics(
   records: VisionPredictionRecord[],
-  label: VisionLabel
+  label: string
 ): ClassMetrics {
   const truePositive = records.filter(
     (record) =>
@@ -99,9 +98,13 @@ function calculateClassMetrics(
 }
 
 export function calculateVisionMetrics(
-  records: VisionPredictionRecord[]
+  records: VisionPredictionRecord[],
+  labels: readonly string[] = VISION_LABELS
 ): VisionAggregateMetrics {
-  const perClass = VISION_LABELS.map((label) =>
+  // Over the dataset's declared labels, not the ones that happen to appear in
+  // the records. A class the model never predicted still belongs in the matrix
+  // with zero recall - dropping it would quietly inflate the macro average.
+  const perClass = labels.map((label) =>
     calculateClassMetrics(records, label)
   );
 

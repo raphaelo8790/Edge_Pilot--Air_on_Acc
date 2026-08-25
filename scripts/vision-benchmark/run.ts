@@ -47,11 +47,24 @@ function readGitCommit(repositoryRoot: string): string {
 async function main(): Promise<void> {
   const repositoryRoot = process.cwd();
   const provider = readProvider();
+  // No silent default. This script is run with `node --import tsx`, which does
+  // NOT load .env - so OLLAMA_VISION_MODEL set there was never visible here,
+  // and the old fallback quietly benchmarked 'gemma4' whether or not it was
+  // installed. Twenty-one failed requests then look like a bad model rather
+  // than a missing one.
   const defaultModel =
     provider === 'ollama'
-      ? process.env.OLLAMA_VISION_MODEL ?? 'gemma4'
-      : process.env.GEMINI_VISION_MODEL ?? 'gemini-3.6-flash';
+      ? process.env.OLLAMA_VISION_MODEL
+      : process.env.GEMINI_VISION_MODEL;
   const model = readArgument('model') ?? defaultModel;
+
+  if (!model) {
+    throw new Error(
+      `No model given. Pass --model=<tag> exactly as the runtime reports it, ` +
+        `for example --model=llava:latest. ` +
+        `Check what is installed with: curl http://localhost:11434/api/tags`
+    );
+  }
   const deviceProfileId =
     readArgument('device') ??
     process.env.VISION_DEVICE_PROFILE_ID ??
