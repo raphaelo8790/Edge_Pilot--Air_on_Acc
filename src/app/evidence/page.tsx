@@ -2,6 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Link from 'next/link';
 
+import { ArcadeNavLinks } from '@/components/ArcadeNav';
+import { PaletteToggle } from '@/components/PaletteToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
+
 import './../dashboard/dashboard.css';
 
 /**
@@ -201,7 +205,23 @@ export default async function EvidencePage() {
         </div>
         <div className="epd-tagline">
           what each artefact proves, and what it does not
+          {' · '}
+          <ArcadeNavLinks
+            items={[
+              { href: '/', label: 'home' },
+              { href: '/dashboard', label: 'dashboard' },
+              { href: '/compare', label: 'compare' },
+            ]}
+          />
         </div>
+        <PaletteToggle
+          className="btn"
+          style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
+        />
+        <ThemeToggle
+          className="btn"
+          style={{ padding: '4px 10px', fontSize: 12 }}
+        />
       </header>
 
       <main className="epd-main">
@@ -218,6 +238,12 @@ export default async function EvidencePage() {
             Vision results have their own page:{' '}
             <Link href="/vision-benchmark">vision benchmark comparison</Link>.
             Live runs and controlled fixtures are labelled separately there.
+          </p>
+          <p className="card-sub" style={{ marginBottom: 0 }}>
+            The ten-case matrix below is summarised as a pass count. Each case,
+            with the request that produced it and the behaviour observed, is on
+            the <Link href="/evaluation">evaluation matrix page</Link> — including
+            the three prompt-injection cases.
           </p>
         </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * EdgePilot benchmark dashboard — work package: product UI & benchmark dashboard
+ * EdgePilot benchmark dashboard — module owner: Kareem Ehab
  * (Product UI & Benchmark Dashboard Engineer / Integration Lead).
  *
  * The complete journey against the real /api/v1 backend:
@@ -12,6 +12,10 @@
  * server-side in the benchmark module.
  */
 import { useEffect, useRef, useState } from "react";
+
+import { ArcadeNavLinks } from "@/components/ArcadeNav";
+import { PaletteToggle } from "@/components/PaletteToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import type { BenchmarkRun } from "./api";
 import { requirementFor, type TaskType } from "@/modules/benchmark/core/services/TaskCompatibility";
@@ -86,14 +90,24 @@ export function DashboardApp() {
           workload → provider → measured run → readiness, with
           provenance on every number
           {" · "}
-          <a href="/evidence" style={{ color: "var(--text-muted)" }}>
-            evidence
-          </a>
-          {" · "}
-          <a href="/vision-benchmark" style={{ color: "var(--text-muted)" }}>
-            vision
-          </a>
+          <ArcadeNavLinks
+            items={[
+              { href: "/", label: "home" },
+              { href: "/compare", label: "compare" },
+              { href: "/evidence", label: "evidence" },
+              { href: "/evaluation", label: "matrix" },
+              { href: "/vision-benchmark", label: "vision" },
+            ]}
+          />
         </div>
+        <PaletteToggle
+          className="btn"
+          style={{ marginLeft: "auto", padding: "4px 10px", fontSize: 11 }}
+        />
+        <ThemeToggle
+          className="btn"
+          style={{ padding: "4px 10px", fontSize: 12 }}
+        />
       </header>
 
       <main className="epd-main" id="epd-main">

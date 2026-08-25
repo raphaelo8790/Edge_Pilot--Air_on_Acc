@@ -83,3 +83,10 @@ export function fmtElapsed(seconds: number): string {
   const rest = s % 60;
   return m > 0 ? `${m}m ${String(rest).padStart(2, "0")}s` : `${rest}s`;
 }
+
+/** Wall-clock span between two ISO timestamps, e.g. "1m 05s". */
+export function fmtElapsedRange(startedAt: string, completedAt: string): string {
+  const ms = Date.parse(completedAt) - Date.parse(startedAt);
+  if (!Number.isFinite(ms) || ms < 0) return "unknown duration";
+  return fmtElapsed(ms / 1000);
+}

@@ -34,6 +34,18 @@ export interface LocalModel {
   quantization: string | null;
   /** Model families the runtime reports, e.g. ["llama"]. */
   families: string[];
+  /**
+   * Whether the model is loaded in memory right now, from `/api/ps`.
+   *
+   * Ollama unloads a model once its keep-alive expires, and the first call
+   * after that pays to read it back off disk — the cold start a benchmark
+   * measures and then discards. `false` means installed but asleep.
+   *
+   * NULL WHEN WE COULD NOT ASK. `/api/ps` failing is not the same as a model
+   * being asleep, and reporting the two the same way would put a confident
+   * claim on a missing answer.
+   */
+  resident: boolean | null;
 }
 
 export interface LocalRuntimeStatus {
@@ -90,7 +102,7 @@ interface RawTag {
   };
 }
 
-function toModel(raw: RawTag): LocalModel {
+function toModel(raw: RawTag, resident: boolean | null): LocalModel {
   const families =
     raw.details?.families ??
     (raw.details?.family ? [raw.details.family] : []);
@@ -101,7 +113,35 @@ function toModel(raw: RawTag): LocalModel {
     parameterSize: raw.details?.parameter_size ?? null,
     quantization: raw.details?.quantization_level ?? null,
     families,
+    resident,
   };
+}
+
+interface RawLoaded {
+  name?: string;
+  model?: string;
+}
+
+/**
+ * Names of the models currently held in memory, or null if `/api/ps` could not
+ * be read.
+ *
+ * Both `name` and `model` are collected because the two endpoints do not
+ * always spell a tag the same way, and a mismatch here would quietly report a
+ * loaded model as asleep.
+ */
+function loadedNames(body: unknown): Set<string> {
+  const models =
+    body && typeof body === 'object' && Array.isArray((body as { models?: unknown }).models)
+      ? ((body as { models: RawLoaded[] }).models)
+      : [];
+
+  const names = new Set<string>();
+  for (const entry of models) {
+    if (typeof entry.name === 'string') names.add(entry.name);
+    if (typeof entry.model === 'string') names.add(entry.model);
+  }
+  return names;
 }
 
 export interface OllamaCatalogOptions {
@@ -177,7 +217,14 @@ export class OllamaCatalog {
         ? (version.body as { version: string }).version
         : null;
 
-    const tags = await getJson(`${this.host}/api/tags`, this.timeoutMs);
+    // What is installed, and what is awake. Asked together because they are
+    // one question on screen ("what can I run, and what will cost a cold
+    // start"), and because two sequential 3s timeouts would double the wait
+    // on an unresponsive host.
+    const [tags, loaded] = await Promise.all([
+      getJson(`${this.host}/api/tags`, this.timeoutMs),
+      getJson(`${this.host}/api/ps`, this.timeoutMs),
+    ]);
 
     const rawModels =
       tags.ok &&
@@ -187,8 +234,14 @@ export class OllamaCatalog {
         ? ((tags.body as { models: RawTag[] }).models)
         : [];
 
+    // Null, not an empty set: "nothing is loaded" and "we could not find out"
+    // are different answers and the UI says so differently.
+    const awake = loaded.ok ? loadedNames(loaded.body) : null;
+
     const models = rawModels
-      .map(toModel)
+      .map((raw) =>
+        toModel(raw, awake === null ? null : awake.has(raw.name ?? 'unknown')),
+      )
       .sort((a, b) => a.name.localeCompare(b.name));
 
     if (models.length === 0) {

@@ -18,6 +18,10 @@ import type {
   BenchmarkRun,
 } from "@/modules/benchmark/application/dtos/BenchmarkMeasurement";
 import type { BenchmarkRequest } from "@/modules/benchmark/application/dtos/BenchmarkRequest";
+import type { BenchmarkRunOutcome } from "@/modules/benchmark/application/services/BenchmarkRunner";
+import type { ComparisonReport } from "@/modules/benchmark/core/services/ComparisonReport";
+import type { Modality, ModalityConfidence } from "@/modules/benchmark/core/services/ModelModality";
+import type { ProviderTier } from "@/modules/benchmark/core/services/PrivacyAssessor";
 import { getSessionId } from "./session";
 
 /**
@@ -82,6 +86,11 @@ export interface LocalModel {
   modality: "text" | "vision" | "embedding";
   modality_confidence: "reported" | "inferred";
   modality_reason: string;
+  /**
+   * Loaded in memory right now. False means installed but asleep — the next
+   * call pays a cold start. Null when the runtime could not be asked.
+   */
+  resident: boolean | null;
 }
 
 export interface LocalRuntime {
@@ -193,9 +202,14 @@ async function call<T>(
     ok: false,
     status: res.status,
     error: typeof body.error === "string" ? body.error : "Unknown error",
-    details: body.details,
-    // "All providers failed" carries the full run in data — keep it, it is
-    // real evidence (see benchmark-api.md).
+    // One route (/workloads 503) keys its explanation `detail`, every other
+    // route uses `details`, and /readiness/[id] 404 uses `message`. The wire
+    // is inconsistent; the client is not.
+    details: body.details ?? body.detail ?? body.message,
+    // Three failures ship data alongside success:false — "All providers
+    // failed" (the full run), "Comparison refused" ({plan}) and the share
+    // "Confirmation required" preview. Kept verbatim; the caller knows which
+    // shape it asked for.
     failedRun: body.data ? (body.data as BenchmarkRun) : undefined,
   };
 }
@@ -239,4 +253,137 @@ export function getBenchmarkById(benchmarkId: string) {
   }>(`/benchmarks?benchmark_id=${encodeURIComponent(benchmarkId)}`);
 }
 
-export type { BenchmarkRun, BenchmarkRequest };
+// ---------------------------------------------------------------------------
+// Comparisons — POST /api/v1/comparisons
+//
+// Wire quirk the types below encode deliberately: `plan` is serialised to
+// snake_case by the route, while `report` and `outcomes` are the domain
+// objects verbatim (camelCase), and `outcome.results`/`outcome.summary`
+// inside them are snake_case again. Nothing is persisted server-side.
+// ---------------------------------------------------------------------------
+
+export interface ComparisonEntrantInput {
+  provider: string;
+  model: string;
+  /** Declared, never detected — free tiers commonly train on input. */
+  tier?: ProviderTier;
+}
+
+export interface ComparisonPlanEntrantDto {
+  provider: string;
+  model: string;
+  provider_type: "local" | "cloud";
+  modality: Modality;
+  modality_confidence: ModalityConfidence;
+  modality_reason: string;
+}
+
+export interface ComparisonPlanDto {
+  mode: "parallel" | "sequential";
+  mode_reason: string;
+  modality: Modality | null;
+  caveats: string[];
+  entrants: ComparisonPlanEntrantDto[];
+}
+
+export interface ComparisonOutcomeDto {
+  label: string;
+  outcome: BenchmarkRunOutcome;
+  parametersBillions: number | null;
+}
+
+export interface ComparisonResultDto {
+  session_logged: boolean;
+  correlation_id: string;
+  plan: ComparisonPlanDto;
+  report: ComparisonReport;
+  outcomes: ComparisonOutcomeDto[];
+}
+
+/** The longest call in the app: up to 4 entrants × (iterations + 1) real runs. */
+export function runComparison(input: {
+  entrants: ComparisonEntrantInput[];
+  prompt: string;
+  iterations: number;
+}) {
+  return call<ComparisonResultDto>("/comparisons", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Session log — populated only by comparison runs. GET returns a raw download
+// document rather than the API envelope, so it gets its own fetch path.
+// ---------------------------------------------------------------------------
+
+export interface SharePreview {
+  consent_statement: string;
+  would_send: {
+    schema: string;
+    session_id: string;
+    event_count: number;
+    disclosure: string[];
+    events: unknown[];
+  };
+}
+
+export async function downloadSessionLog(): Promise<ApiFailure | null> {
+  const sessionId = getSessionId();
+  if (sessionId === null) {
+    return { ok: false, status: 0, error: "No session id in this browser" };
+  }
+  let res: Response;
+  try {
+    res = await fetch("/api/v1/session-log", {
+      headers: { [SESSION_HEADER]: sessionId },
+      cache: "no-store",
+    });
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      error: "Network error",
+      details: "Could not reach the EdgePilot server. Is `npm run dev` running?",
+    };
+  }
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return {
+      ok: false,
+      status: res.status,
+      error: typeof body.error === "string" ? body.error : "Export failed",
+      details: body.details,
+    };
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `edgepilot-session-${sessionId}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return null;
+}
+
+export function discardSessionLog() {
+  return call<{ session_id: string; discarded: boolean }>("/session-log", {
+    method: "DELETE",
+  });
+}
+
+export function getSharePreview() {
+  return call<SharePreview>("/session-log/share");
+}
+
+export function shareSessionLog(note?: string) {
+  return call<{ shared_id: string; shared_at: string; event_count: number }>(
+    "/session-log/share",
+    {
+      method: "POST",
+      body: JSON.stringify(note ? { confirm: true, note } : { confirm: true }),
+    },
+  );
+}
+
+export type { BenchmarkRun, BenchmarkRequest, BenchmarkRunOutcome, ComparisonReport };

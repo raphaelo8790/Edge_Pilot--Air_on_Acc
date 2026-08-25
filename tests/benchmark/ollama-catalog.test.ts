@@ -119,3 +119,78 @@ describe('OllamaCatalog', () => {
     expect(status.message).toContain('HTTP 503');
   });
 });
+
+/**
+ * Which models are awake, from /api/ps.
+ *
+ * The distinction that matters is between "asleep" and "we could not ask".
+ * Both are falsy, and conflating them would put a confident claim (a model
+ * shown sleeping, a cold start predicted) on top of a missing answer.
+ */
+describe('OllamaCatalog residency', () => {
+  const route = (
+    url: string,
+    ps: { status?: number; body?: unknown } | 'reject'
+  ) => {
+    if (url.endsWith('/api/version')) return { body: { version: '0.32.14' } };
+    if (url.endsWith('/api/ps')) return ps;
+    return { body: TAGS };
+  };
+
+  it('marks a loaded model resident and an unloaded one asleep', async () => {
+    stubFetch((url) =>
+      route(url, { body: { models: [{ name: 'mistral:7b' }] } })
+    );
+
+    const status = await new OllamaCatalog({ host: 'http://localhost:11434' }).status();
+    const byName = Object.fromEntries(
+      status.models.map((model) => [model.name, model.resident])
+    );
+
+    expect(byName['mistral:7b']).toBe(true);
+    expect(byName['llama3.2:latest']).toBe(false);
+  });
+
+  it('reports null — not asleep — when /api/ps cannot be read', async () => {
+    stubFetch((url) => route(url, 'reject'));
+
+    const status = await new OllamaCatalog({ host: 'http://localhost:11434' }).status();
+
+    status.models.forEach((model) => {
+      expect(model.resident).toBeNull();
+    });
+  });
+
+  it('reports null when /api/ps answers with an error status', async () => {
+    stubFetch((url) => route(url, { status: 500 }));
+
+    const status = await new OllamaCatalog({ host: 'http://localhost:11434' }).status();
+
+    status.models.forEach((model) => {
+      expect(model.resident).toBeNull();
+    });
+  });
+
+  it('everything is asleep when nothing is loaded', async () => {
+    stubFetch((url) => route(url, { body: { models: [] } }));
+
+    const status = await new OllamaCatalog({ host: 'http://localhost:11434' }).status();
+
+    status.models.forEach((model) => {
+      expect(model.resident).toBe(false);
+    });
+  });
+
+  it('matches on the `model` field too, not only `name`', async () => {
+    // /api/ps and /api/tags do not always spell a tag the same way, and a
+    // missed match would report a loaded model as asleep.
+    stubFetch((url) =>
+      route(url, { body: { models: [{ model: 'llama3.2:latest' }] } })
+    );
+
+    const status = await new OllamaCatalog({ host: 'http://localhost:11434' }).status();
+    const llama = status.models.find((m) => m.name === 'llama3.2:latest');
+
+    expect(llama?.resident).toBe(true);
+  });
+});

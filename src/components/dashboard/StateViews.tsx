@@ -67,13 +67,26 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   const detail = detailText(failure.details);
+  // 503 and a dead network are "something is not running", not "something is
+  // wrong with the request" — they get the warn treatment and a hint that
+  // retrying can genuinely fix them. 4xx/5xx keep the error treatment.
+  const unavailable = failure.status === 503 || failure.status === 0;
   return (
-    <div className="state-panel state-error" role="alert">
+    <div
+      className={`state-panel ${unavailable ? "state-unavailable" : "state-error"}`}
+      role="alert"
+    >
       <p className="state-title">
         {failure.error}
         {failure.status > 0 ? ` (HTTP ${failure.status})` : ""}
       </p>
       {detail ? <p className="state-detail">{detail}</p> : null}
+      {unavailable ? (
+        <p className="state-detail">
+          This usually means a service is not running rather than a bug — once
+          it is back, retry continues from here.
+        </p>
+      ) : null}
       {onRetry ? (
         <button className="btn btn-primary" onClick={onRetry}>
           Retry

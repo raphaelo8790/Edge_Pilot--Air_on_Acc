@@ -57,6 +57,9 @@ export async function GET() {
             modality: verdict.modality,
             modality_confidence: verdict.confidence,
             modality_reason: verdict.reason,
+            // Loaded right now, from /api/ps. Null when that call failed —
+            // "we could not ask" is not "it is asleep".
+            resident: model.resident,
           };
         }),
       },

@@ -14,6 +14,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import benchmarkTasks from "../../../benchmark-tasks.json";
 import { runBenchmark, type ApiFailure, type BenchmarkRun } from "./api";
 import { fmtElapsed } from "./format";
+import { ProviderLogo } from "./ProviderLogo";
 import { ErrorState } from "./StateViews";
 import {
   describeEgressWarning,
@@ -177,6 +178,7 @@ export function RunPanel({
     <section className="card" aria-labelledby={`${id}-t`}>
       <h2 id={`${id}-t`}>3 · Run a controlled benchmark</h2>
       <p className="card-sub">
+        <ProviderLogo provider={provider} size={15} style={{ marginRight: 5 }} />
         Provider <strong>{provider}</strong> · model <strong>{model}</strong>.
         The run happens server-side (keys never reach the browser) and every
         iteration is recorded with its provenance.
@@ -188,9 +190,18 @@ export function RunPanel({
           role="dialog"
           aria-modal="true"
           aria-labelledby="egress-title"
+          onKeyDown={(e) => {
+            // The decision must stay cancellable from the keyboard.
+            if (e.key === "Escape") setPendingWarning(null);
+          }}
         >
-          <div className="egress-dialog">
+          <div
+            className={`egress-dialog${
+              pendingWarning.severity === "notice" ? " egress-notice" : ""
+            }`}
+          >
             <h3 id="egress-title" style={{ marginTop: 0 }}>
+              {pendingWarning.severity === "warning" ? "⚠ " : ""}
               {pendingWarning.title}
             </h3>
             <p>{pendingWarning.detail}</p>
@@ -215,7 +226,13 @@ export function RunPanel({
             </pre>
 
             <div className="btn-row">
-              <button className="btn" onClick={() => setPendingWarning(null)}>
+              {/* Cancel takes initial focus: Enter must never send by default
+                  when the whole point of the dialog is a deliberate choice. */}
+              <button
+                className="btn"
+                autoFocus
+                onClick={() => setPendingWarning(null)}
+              >
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={() => void run()}>
@@ -240,11 +257,18 @@ export function RunPanel({
       ) : (
         <>
           <div className="form-grid">
+            {/*
+              Both fields put the control immediately under the label, with
+              the explanation beneath it. The explanations are very different
+              lengths — one line against four — so with the prose above the
+              control the select and the number input landed at completely
+              different heights inside the same grid row.
+            */}
             <div className="field">
               <label htmlFor={`${id}-task`}>Controlled task (prompt preset)</label>
-              <p className="hint">From the team’s benchmark task list; editable below.</p>
               <select
                 id={`${id}-task`}
+                aria-describedby={`${id}-task-hint`}
                 value={taskName}
                 onChange={(e) => {
                   setTaskName(e.target.value);
@@ -258,15 +282,25 @@ export function RunPanel({
                   </option>
                 ))}
               </select>
+              <p className="hint" id={`${id}-task-hint`}>
+                From the team’s benchmark task list; editable below.
+                {(() => {
+                  const task = TASKS.find((t) => t.name === taskName);
+                  if (!task) return null;
+                  return (
+                    <>
+                      {" "}
+                      {task.description}
+                      {!TASK_PROMPTS[task.name]
+                        ? " (No preset prompt for this task — the prompt below is unchanged.)"
+                        : ""}
+                    </>
+                  );
+                })()}
+              </p>
             </div>
             <div className="field">
               <label htmlFor={`${id}-iter`}>Iterations (1–100)</label>
-              <p className="hint">
-                More iterations → better medians, longer run.{" "}
-                <strong>{iterations + 1} calls will be made:</strong> the first
-                is discarded because it pays for loading the model, and counting
-                it would describe the load rather than the model.
-              </p>
               <input
                 id={`${id}-iter`}
                 type="number"
@@ -274,8 +308,15 @@ export function RunPanel({
                 max={100}
                 value={iterations}
                 onChange={(e) => setIterations(Number(e.target.value))}
+                aria-describedby={`${id}-iter-hint`}
                 aria-invalid={iterError ? true : undefined}
               />
+              <p className="hint" id={`${id}-iter-hint`}>
+                More iterations → better medians, longer run.{" "}
+                <strong>{iterations + 1} calls will be made:</strong> the first
+                is discarded because it pays for loading the model, and counting
+                it would describe the load rather than the model.
+              </p>
               {iterError ? <p className="error-text">{iterError}</p> : null}
             </div>
             <div className="field span-2">

@@ -19,13 +19,8 @@ import {
   type ProvidersMeta,
 } from "./api";
 import { fitFor } from "./InstalledModels";
+import { ProviderLogo } from "./ProviderLogo";
 import { ErrorState, LoadingState, EmptyState } from "./StateViews";
-
-export const PROVIDER_COLOR: Record<string, string> = {
-  ollama: "var(--series-ollama)",
-  gemini: "var(--series-gemini)",
-  groq: "var(--series-groq)",
-};
 
 /** Suggested model names per provider (from the providers' official docs). */
 const MODEL_SUGGESTIONS: Record<string, string[]> = {
@@ -184,11 +179,9 @@ export function ProviderPanel({
                   }}
                 />
                 <span className="rc-title">
-                  <span
-                    className="swatch"
-                    style={{ background: PROVIDER_COLOR[p.name] ?? "var(--text-muted)" }}
-                    aria-hidden="true"
-                  />
+                  {/* The brand mark is currentColor, so it re-inks with the
+                      theme — Groq's dark G becomes a light G on dark pages. */}
+                  <ProviderLogo provider={p.name} size={18} />
                   {p.display_name}
                 </span>
                 <span className="rc-meta">
@@ -196,6 +189,14 @@ export function ProviderPanel({
                   {p.reports_ttft ? "reports TTFT" : "no TTFT"} ·{" "}
                   {p.reports_output_tokens ? "reports tokens" : "no token counts"}
                 </span>
+                {/* The endpoint, before selection — "is this leaving the
+                    machine" is a fact about this URL, and it is the same URL
+                    the pre-send egress warning is computed from. */}
+                {p.base_url ? (
+                  <span className="rc-meta">
+                    sends to <code style={{ fontSize: 11.5 }}>{p.base_url}</code>
+                  </span>
+                ) : null}
                 <span className="rc-meta">
                   {p.is_configured ? (
                     <span className="badge badge-measured">configured</span>
