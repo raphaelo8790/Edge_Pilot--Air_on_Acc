@@ -1,0 +1,167 @@
+// EdgePilot AI — Prisma schema
+//
+// Table/column names are snake_case in the database and camelCase in TypeScript.
+// Do not rename a @map() value without a migration: the API responses and the
+// column names are contractually linked (e.g. providers.is_active is what
+// /api/v1/providers returns as `is_active`).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+  // url        = the connection the running app uses. On Neon this is the
+  //              POOLED host (…-pooler.…) — it survives many short-lived
+  //              serverless connections.
+  // directUrl  = the connection the Prisma CLI uses for migrations. Must be
+  //              the UNPOOLED host (same string, `-pooler` removed), because
+  //              schema changes cannot run through pgBouncer.
+  //
+  // For local Docker Postgres there is no pooler, so both are the same string.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workloads  Workload[]
+  devices    Device[]
+  benchmarks Benchmark[]
+
+  @@map("users")
+}
+
+model Workload {
+  id           String   @id @default(uuid())
+  taskType     String   @map("task_type")
+  inputFormat  String   @map("input_format")
+  outputFormat String   @map("output_format")
+  constraints  Json     @default("{}")
+  userId       String   @map("user_id")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmarks Benchmark[]
+
+  @@index([userId])
+  @@map("workloads")
+}
+
+model Device {
+  id        String   @id @default(uuid())
+  name      String
+  cpu       String
+  ramGb     Int      @map("ram_gb")
+  gpu       String?
+  storageGb Int      @map("storage_gb")
+  network   String?
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  benchmarks Benchmark[]
+
+  @@index([userId])
+  @@map("devices")
+}
+
+// Shared catalog reference data, not user-owned. Retire a provider by setting
+// isActive = false rather than deleting it — deleting one is blocked while any
+// benchmark still references it (see Benchmark.provider below), because the
+// benchmark history has to keep saying which provider produced it.
+model Provider {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  type      String
+  baseUrl   String?  @map("base_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now())
+
+  benchmarks Benchmark[]
+
+  @@map("providers")
+}
+
+model Benchmark {
+  id          String    @id @default(uuid())
+  workloadId  String    @map("workload_id")
+  deviceId    String    @map("device_id")
+  providerId  String    @map("provider_id")
+  model       String
+  prompt      String
+  iterations  Int       @default(1)
+  status      String    @default("pending")
+  userId      String    @map("user_id")
+  createdAt   DateTime  @default(now())
+  completedAt DateTime? @map("completed_at")
+
+  workload Workload @relation(fields: [workloadId], references: [id], onDelete: Cascade)
+  device   Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // No cascade: a provider cannot be deleted out from under a recorded run.
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  results   BenchmarkResult[]
+  readiness ReadinessScore?
+
+  @@index([workloadId])
+  @@index([deviceId])
+  @@index([providerId])
+  @@index([userId])
+  @@map("benchmarks")
+}
+
+model BenchmarkResult {
+  id              String   @id @default(uuid())
+  benchmarkId     String   @map("benchmark_id")
+  iteration       Int
+  latencyMs       Float    @map("latency_ms")
+  tokensPerSecond Float?   @map("tokens_per_second")
+  ttftMs          Float?   @map("ttft_ms")
+  success         Boolean  @default(true)
+  errorMessage    String?  @map("error_message")
+  createdAt       DateTime @default(now())
+
+  benchmark Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+
+  @@index([benchmarkId])
+  @@map("benchmark_results")
+}
+
+model ReadinessScore {
+  id               String   @id @default(uuid())
+  benchmarkId      String   @unique @map("benchmark_id")
+  hardwareFit      Int      @map("hardware_fit")
+  latencyScore     Int      @map("latency_score")
+  privacyScore     Int      @map("privacy_score")
+  costScore        Int      @map("cost_score")
+  reliabilityScore Int      @map("reliability_score")
+  overallReadiness Int      @map("overall_readiness")
+  recommendation   String
+  evidence         Json     @default("[]")
+  limitations      Json     @default("[]")
+  createdAt        DateTime @default(now())
+
+  benchmark Benchmark @relation(fields: [benchmarkId], references: [id], onDelete: Cascade)
+
+  @@map("readiness_scores")
+}
+
+model RateLimit {
+  id         String   @id @default(uuid())
+  identifier String
+  timestamp  DateTime @default(now())
+
+  @@index([identifier, timestamp])
+  @@map("rate_limits")
+}

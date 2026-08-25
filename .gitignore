@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files — every one of them, except the committed template.
+# The bare `.env` and any variant (.env.local, .env.neon, .env.production)
+# hold real credentials. `.env*.local` alone does NOT cover them.
+.env*
+!.env.example
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma
+# prisma/migrations/ is COMMITTED on purpose. It is the shared history that
+# lets everyone run `prisma migrate deploy` and end up with identical tables.
+# Ignoring it means only the author's database ever matches the schema.
+# Only generated output is ignored:
+prisma/generated/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Generated vision benchmark images
+/datasets/vision-benchmark/images/
+/datasets/vision-benchmark.scaffold-backup-*/
+
+# Generated live benchmark evidence
+/evidence/vision-benchmark/live-*.json
+
+# Captured setup evidence is a deliverable, not a stray log. The blanket
+# `*.log` rule above would otherwise swallow evidence/benchmark/clean-start.log,
+# which is the automatic record of a clean-environment start and has to be
+# reviewable in the pull request.
+!/evidence/benchmark/*.log

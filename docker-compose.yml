@@ -1,0 +1,117 @@
+# EdgePilot AI — local development stack.
+#
+#   docker compose up -d                      Postgres only (the default)
+#   docker compose --profile ollama up -d     + the local model runtime
+#   docker compose --profile app up -d        + the built application
+#   docker compose --profile all up -d        everything
+#   docker compose down                       stop (data survives)
+#   docker compose down -v                    stop AND delete the volumes
+#
+# Postgres is deliberately NOT behind a profile: `docker compose up -d` and
+# `bash setup-db.sh` must keep doing exactly what docs/internal/database.md
+# says they do. Everything added since is opt-in, so nobody's existing workflow
+# changes when they pull this file.
+#
+# The Postgres credentials here are deliberately non-secret: that database
+# holds only local test data and is not reachable from outside your machine.
+# The app service takes real provider keys from your .env, which is gitignored
+# and never baked into an image.
+
+services:
+  postgres:
+    image: postgres:15 # pinned major version — no surprise upgrades
+    container_name: edgepilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: EdgePilot
+      POSTGRES_PASSWORD: EdgePilotTesting
+      POSTGRES_DB: edgepilot # matches the /edgepilot at the end of DATABASE_URL
+    ports:
+      - '5432:5432' # published to the host so the Prisma CLI and the app can reach it
+    volumes:
+      - edgepilot_pgdata:/var/lib/postgresql/data # data persists across restarts
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U EdgePilot -d edgepilot']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # The local model runtime. Behind a profile because it is a multi-gigabyte
+  # image and a machine that only needs the database should not pull it.
+  #
+  #   docker compose --profile ollama up -d
+  #   docker compose --profile ollama exec ollama ollama pull llama3.2:1b
+  #
+  # Models live in the named volume, so they survive `docker compose down` and
+  # are downloaded once rather than once per restart.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: edgepilot-ollama
+    profiles: ['ollama', 'all']
+    restart: unless-stopped
+    ports:
+      - '11434:11434' # so OLLAMA_HOST=http://localhost:11434 works from the host
+    volumes:
+      - edgepilot_ollama:/root/.ollama
+    environment:
+      # Keep a model resident between iterations. Without this Ollama unloads
+      # after five minutes, and an unload/reload lands in the middle of a
+      # benchmark and is measured as latency.
+      OLLAMA_KEEP_ALIVE: '30m'
+    healthcheck:
+      # No curl in the image; ollama's own CLI talks to the local server.
+      test: ['CMD-SHELL', 'ollama list >/dev/null 2>&1 || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # --- GPU (NVIDIA) ---------------------------------------------------------
+    # CPU by default, because a GPU reservation on a machine without one makes
+    # the service fail to start. With an NVIDIA GPU and the container toolkit
+    # installed (on Windows: a current driver + WSL2), uncomment this block.
+    # A benchmark on CPU and a benchmark on GPU are not comparable, so record
+    # which one produced any figure you report.
+    #
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: ['gpu']
+
+  # The built application. Behind a profile because day-to-day development runs
+  # `npm run dev` on the host; this service is for verifying that the image
+  # builds and runs, and for a demo on a machine with no Node toolchain.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edgepilot-app
+    profiles: ['app', 'all']
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Container-to-container hostnames, not localhost: inside a container,
+      # localhost is that container.
+      DATABASE_URL: 'postgresql://EdgePilot:EdgePilotTesting@postgres:5432/edgepilot'
+      DIRECT_URL: 'postgresql://EdgePilot:EdgePilotTesting@postgres:5432/edgepilot'
+      OLLAMA_HOST: 'http://ollama:11434'
+      NODE_ENV: 'production'
+      # Secrets are passed through from your .env at RUN time and are never
+      # written into the image. The `:-` default keeps compose from erroring
+      # when a key is absent; the adapter then reports the provider as
+      # not configured, which is the honest outcome.
+      GEMINI_API_KEY: '${GEMINI_API_KEY:-}'
+      GROQ_API_KEY: '${GROQ_API_KEY:-}'
+      BENCHMARK_TIMEOUT_MS: '${BENCHMARK_TIMEOUT_MS:-60000}'
+      BENCHMARK_FALLBACK_ORDER: '${BENCHMARK_FALLBACK_ORDER:-ollama,groq,gemini}'
+      BENCHMARK_ALLOW_DEMO: '${BENCHMARK_ALLOW_DEMO:-false}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  edgepilot_pgdata:
+  edgepilot_ollama:

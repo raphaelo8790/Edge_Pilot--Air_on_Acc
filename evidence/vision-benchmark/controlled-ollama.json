@@ -1,0 +1,307 @@
+{
+  "schemaVersion": "1.0.0",
+  "workloadId": "construction-component-recognition-v1",
+  "workloadVersion": "1.0.0",
+  "datasetId": "edgepilot-synthetic-construction-components-v1",
+  "manifestVersion": "1.0.0",
+  "manifestSha256": "30fd92076bbfc13be4ceed672e1df62a8511c32755b695699296edf38a99dea1",
+  "preprocessingVersion": "sharp-png-v1",
+  "promptVersion": "1.0.0",
+  "executionMode": "controlled",
+  "provider": "ollama-controlled",
+  "providerKind": "local",
+  "model": "gemma4-fixture",
+  "deviceProfileId": "controlled-test-device",
+  "gitCommitSha": "0000000",
+  "startedAt": "2026-07-24T08:00:00.000Z",
+  "completedAt": "2026-07-24T08:00:03.000Z",
+  "records": [
+    {
+      "sampleId": "hardhat-01",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-02",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-03",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-01",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-02",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-03",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-01",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-02",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-03",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-01",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-02",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-03",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-01",
+      "expectedLabel": "mask",
+      "rawOutput": "mask",
+      "normalizedLabel": "mask",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-02",
+      "expectedLabel": "mask",
+      "rawOutput": "mask",
+      "normalizedLabel": "mask",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-03",
+      "expectedLabel": "mask",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-01",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-02",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-03",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-01",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 85,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-02",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 88,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-03",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 91,
+      "providerSuccess": true,
+      "errorCategory": null
+    }
+  ],
+  "metrics": {
+    "totalSamples": 21,
+    "correctPredictions": 20,
+    "exactMatchAccuracy": 0.9523809523809523,
+    "macroPrecision": 0.9642857142857143,
+    "macroRecall": 0.9523809523809524,
+    "macroF1": 0.9510204081632654,
+    "invalidOutputRate": 0,
+    "successfulRequestRate": 1,
+    "medianLatencyMs": 88,
+    "p95LatencyMs": 91,
+    "throughputSamplesPerSecond": 11.363636363636363,
+    "perClass": [
+      {
+        "label": "hardhat",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "safety_vest",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "gloves",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "goggles",
+        "truePositive": 3,
+        "falsePositive": 1,
+        "falseNegative": 0,
+        "precision": 0.75,
+        "recall": 1,
+        "f1": 0.8571428571428571,
+        "support": 3
+      },
+      {
+        "label": "mask",
+        "truePositive": 2,
+        "falsePositive": 0,
+        "falseNegative": 1,
+        "precision": 1,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "support": 3
+      },
+      {
+        "label": "ladder",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "safety_cone",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      }
+    ]
+  },
+  "thresholds": {
+    "minimumAccuracy": 0.8,
+    "minimumMacroF1": 0.75,
+    "maximumInvalidOutputRate": 0.05,
+    "minimumSuccessfulRequestRate": 0.95
+  },
+  "passed": true,
+  "limitations": [
+    "Predictions and latencies are deterministic controlled fixtures, not live provider measurements.",
+    "The dataset contains synthetic images and does not estimate production-site accuracy.",
+    "The commit marker is intentionally non-release provenance for generated controlled evidence.",
+    "Provider execution mode: local."
+  ]
+}

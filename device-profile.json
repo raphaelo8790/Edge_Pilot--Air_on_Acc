@@ -1,0 +1,66 @@
+{
+  "_comment": "Edge and local benchmark target hardware configurations",
+  "devices": [
+    {
+      "id": "rpi4-arm-4gb",
+      "name": "Raspberry Pi 4 Model B",
+      "architecture": "ARM Cortex-A72",
+      "ram_gb": 4,
+      "tier": "edge"
+    },
+    {
+      "id": "rpi5-arm-8gb",
+      "name": "Raspberry Pi 5",
+      "architecture": "ARM Cortex-A76",
+      "ram_gb": 8,
+      "tier": "edge"
+    },
+    {
+      "id": "mbp-m1-8gb",
+      "name": "MacBook Air M1",
+      "architecture": "Apple Silicon M1",
+      "ram_gb": 8,
+      "tier": "local"
+    },
+    {
+      "id": "mbp-m2-16gb",
+      "name": "MacBook Pro M2",
+      "architecture": "Apple Silicon M2",
+      "ram_gb": 16,
+      "tier": "local"
+    },
+    {
+      "id": "desktop-rtx3070",
+      "name": "Custom Rig - i7 / RTX 3070",
+      "architecture": "x86_64",
+      "ram_gb": 32,
+      "tier": "local"
+    },
+    {
+      "id": "vm-basic-2vcpu",
+      "name": "Cloud VM Standard Instance",
+      "architecture": "x86_64",
+      "vcpu": 2,
+      "ram_gb": 4,
+      "tier": "cloud"
+    },
+    {
+      "id": "vm-gpu-t4",
+      "name": "Cloud VM Accelerated (T4)",
+      "architecture": "x86_64",
+      "vcpu": 4,
+      "ram_gb": 16,
+      "gpu": "NVIDIA T4",
+      "tier": "cloud"
+    },
+    {
+      "id": "vm-high-a100",
+      "name": "Cloud VM Heavy Compute (A100)",
+      "architecture": "x86_64",
+      "vcpu": 8,
+      "ram_gb": 32,
+      "gpu": "NVIDIA A100",
+      "tier": "cloud"
+    }
+  ]
+}

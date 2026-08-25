@@ -1,0 +1,320 @@
+{
+  "artefact": "benchmark failure-mode evidence",
+  "generated_by": "npm run bench:evidence:failures",
+  "what_this_proves": "Each documented error code is produced by the condition it describes, and the runner falls back exactly when the code is retryable.",
+  "what_this_does_not_prove": "Nothing about latency, throughput or model quality. The transport is scripted and the clock is a fixed stepper, so every duration below is an artefact of the harness, not a measurement. Real figures come from `npm run bench:run`.",
+  "harness": {
+    "transport": "fetch replaced with scripted responses; no network call is made",
+    "clock": "stepped by 10 ms on each read",
+    "providers_exercised": [
+      "ollama",
+      "gemini",
+      "groq"
+    ]
+  },
+  "error_code_reference": [
+    {
+      "code": "timeout",
+      "http_status": 504,
+      "retryable": true,
+      "explanation": "The provider did not answer within BENCHMARK_TIMEOUT_MS. The request was aborted; no partial result is recorded as measured."
+    },
+    {
+      "code": "local_unavailable",
+      "http_status": 503,
+      "retryable": true,
+      "explanation": "Nothing is listening on OLLAMA_HOST. Start the runtime (docker compose --profile ollama up -d) or correct the host."
+    },
+    {
+      "code": "invalid_model",
+      "http_status": 422,
+      "retryable": false,
+      "explanation": "The model name is not available on that provider. This is a request error, so the runner does not fall back — a different provider would not make the name correct."
+    },
+    {
+      "code": "unauthorized",
+      "http_status": 502,
+      "retryable": false,
+      "explanation": "The provider rejected the credential. Fix the key in .env; falling back would hide a configuration fault."
+    },
+    {
+      "code": "rate_limited",
+      "http_status": 429,
+      "retryable": true,
+      "explanation": "The provider applied a rate limit or quota. The runner may fall back to another provider."
+    },
+    {
+      "code": "invalid_response",
+      "http_status": 502,
+      "retryable": true,
+      "explanation": "The provider answered with a payload that failed schema validation. Treated as a provider fault, not as a measurement."
+    },
+    {
+      "code": "not_configured",
+      "http_status": 503,
+      "retryable": true,
+      "explanation": "This provider has no credential or host in the current environment, so it was never called."
+    },
+    {
+      "code": "provider_error",
+      "http_status": 502,
+      "retryable": true,
+      "explanation": "The provider returned an error that does not map onto a more specific code."
+    }
+  ],
+  "provider_classification": [
+    {
+      "scenario": "local runtime down",
+      "provider": "ollama",
+      "condition": "TCP connection refused on OLLAMA_HOST",
+      "expected_code": "local_unavailable",
+      "observed_code": "local_unavailable",
+      "observed_message": "local_unavailable: Could not connect to the local model runtime.",
+      "success": false,
+      "http_status_returned_by_api": 503,
+      "runner_may_fall_back": true,
+      "matched": true
+    },
+    {
+      "scenario": "unknown model",
+      "provider": "ollama",
+      "condition": "HTTP 404 with a \"model not found\" body",
+      "expected_code": "invalid_model",
+      "observed_code": "invalid_model",
+      "observed_message": "invalid_model: model \"no-such-model\" not found",
+      "success": false,
+      "http_status_returned_by_api": 422,
+      "runner_may_fall_back": false,
+      "matched": true
+    },
+    {
+      "scenario": "mid-stream failure",
+      "provider": "ollama",
+      "condition": "NDJSON stream carries an error object after partial content",
+      "expected_code": "provider_error",
+      "observed_code": "provider_error",
+      "observed_message": "provider_error: runner process exited unexpectedly",
+      "success": false,
+      "http_status_returned_by_api": 502,
+      "runner_may_fall_back": true,
+      "matched": true
+    },
+    {
+      "scenario": "timeout",
+      "provider": "ollama",
+      "condition": "no response before BENCHMARK_TIMEOUT_MS (set to 20 ms here)",
+      "expected_code": "timeout",
+      "observed_code": "timeout",
+      "observed_message": "timeout: Request aborted after timeout.",
+      "success": false,
+      "http_status_returned_by_api": 504,
+      "runner_may_fall_back": true,
+      "matched": true
+    },
+    {
+      "scenario": "no credential",
+      "provider": "gemini",
+      "condition": "GEMINI_API_KEY unset — the adapter refuses before any network call",
+      "expected_code": "not_configured",
+      "observed_code": "not_configured",
+      "observed_message": "not_configured: GEMINI_API_KEY is not set. Add it to .env (server-side only — never NEXT_PUBLIC_).",
+      "success": false,
+      "http_status_returned_by_api": 503,
+      "runner_may_fall_back": true,
+      "matched": true
+    },
+    {
+      "scenario": "rejected credential",
+      "provider": "gemini",
+      "condition": "HTTP 401 from the streaming endpoint",
+      "expected_code": "unauthorized",
+      "observed_code": "unauthorized",
+      "observed_message": "unauthorized: API key not valid",
+      "success": false,
+      "http_status_returned_by_api": 502,
+      "runner_may_fall_back": false,
+      "matched": true
+    },
+    {
+      "scenario": "rate limited",
+      "provider": "groq",
+      "condition": "HTTP 429 from the chat completions endpoint",
+      "expected_code": "rate_limited",
+      "observed_code": "rate_limited",
+      "observed_message": "rate_limited: Rate limit reached",
+      "success": false,
+      "http_status_returned_by_api": 429,
+      "runner_may_fall_back": true,
+      "matched": true
+    },
+    {
+      "scenario": "unparseable response",
+      "provider": "groq",
+      "condition": "HTTP 200 whose body is not the documented SSE shape",
+      "expected_code": "invalid_response",
+      "observed_code": "invalid_response",
+      "observed_message": "invalid_response: The provider returned a success status but no parseable content, token count or first-token signal. Treated as a provider fault rather than as a zero-token measurement.",
+      "success": false,
+      "http_status_returned_by_api": 502,
+      "runner_may_fall_back": true,
+      "matched": true
+    }
+  ],
+  "runner_fallback_policy": [
+    {
+      "scenario": "first provider fails with timeout",
+      "first_provider_failed_with": "timeout",
+      "retryable": true,
+      "second_provider_was_called": true,
+      "effective_provider": "groq",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "timeout"
+        },
+        {
+          "provider": "groq",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with local_unavailable",
+      "first_provider_failed_with": "local_unavailable",
+      "retryable": true,
+      "second_provider_was_called": true,
+      "effective_provider": "groq",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "local_unavailable"
+        },
+        {
+          "provider": "groq",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with invalid_model",
+      "first_provider_failed_with": "invalid_model",
+      "retryable": false,
+      "second_provider_was_called": false,
+      "effective_provider": null,
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "invalid_model"
+        }
+      ],
+      "terminal_error_code": "invalid_model",
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with unauthorized",
+      "first_provider_failed_with": "unauthorized",
+      "retryable": false,
+      "second_provider_was_called": false,
+      "effective_provider": null,
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "unauthorized"
+        }
+      ],
+      "terminal_error_code": "unauthorized",
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with rate_limited",
+      "first_provider_failed_with": "rate_limited",
+      "retryable": true,
+      "second_provider_was_called": true,
+      "effective_provider": "groq",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "rate_limited"
+        },
+        {
+          "provider": "groq",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with invalid_response",
+      "first_provider_failed_with": "invalid_response",
+      "retryable": true,
+      "second_provider_was_called": true,
+      "effective_provider": "groq",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "invalid_response"
+        },
+        {
+          "provider": "groq",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "first provider fails with provider_error",
+      "first_provider_failed_with": "provider_error",
+      "retryable": true,
+      "second_provider_was_called": true,
+      "effective_provider": "groq",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "failed",
+          "error_code": "provider_error"
+        },
+        {
+          "provider": "groq",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    },
+    {
+      "scenario": "one iteration of three fails, the other two succeed",
+      "first_provider_failed_with": "timeout",
+      "retryable": true,
+      "second_provider_was_called": false,
+      "effective_provider": "ollama",
+      "chain": [
+        {
+          "provider": "ollama",
+          "outcome": "succeeded",
+          "error_code": null
+        }
+      ],
+      "terminal_error_code": null,
+      "behaved_as_documented": true
+    }
+  ],
+  "all_scenarios_behaved_as_documented": true,
+  "mismatches": []
+}

@@ -1,0 +1,218 @@
+==============================================================================
+EdgePilot AI — clean-environment start, captured automatically
+==============================================================================
+
+WHAT THIS LOG IS
+  The output of scripts/benchmark/capture-clean-start.ts, which runs the
+  same commands docs/local-model-setup.md gives a new person, in the same
+  order, on a real machine. Every exit code and every line of output below
+  came from that run. Nothing here was written by hand.
+
+WHAT IT PROVES
+  That the documented setup sequence completes on this machine, with these
+  versions, on this date — and, where a step failed, exactly how it failed.
+
+WHAT IT DOES NOT PROVE
+  Nothing about a different operating system, a different Docker version,
+  or a machine with a GPU when this one had none. The durations below are
+  setup times, not benchmark measurements: measured inference figures live
+  in evidence/benchmark/measured-*.json and nowhere else.
+
+invocation : npm run bench:clean-start -- --skip-docker --skip-benchmark
+started    : 2026-07-27T03:18:49.758Z
+finished   : 2026-07-27T03:19:18.138Z
+steps      : 7 (5 ok, 0 required failures, 2 optional failures, 0 skipped)
+
+MACHINE
+host              : vm
+platform          : linux 6.18.5 (x64)
+cpu               : Intel(R) Xeon(R) Processor @ 2.80GHz × 2
+memory            : 7.84 GB
+node              : v22.22.2
+cwd               : /home/claude/work
+ollama health url : http://localhost:11434/api/tags
+accelerator       : NOT DETECTED — state manually whether this run used a GPU
+
+RESULT
+  PASS — every required step succeeded.
+
+──────────────────────────────────────────────────────────────────────────────
+[01] node and npm versions — OK
+──────────────────────────────────────────────────────────────────────────────
+why      : Records the toolchain. Next.js 16 needs Node 20.9 or newer.
+command  : node --version && npm --version
+started  : 2026-07-27T03:18:49.760Z
+duration : 164 ms
+exit code: 0
+required : yes
+
+--- stdout ---
+v22.22.2
+10.9.7
+
+──────────────────────────────────────────────────────────────────────────────
+[02] generate the Prisma client — FAILED
+──────────────────────────────────────────────────────────────────────────────
+why      : The benchmark repository imports the generated client. Optional here because the provider layer and its tests do not touch the database.
+command  : npx prisma generate
+started  : 2026-07-27T03:18:49.924Z
+duration : 4765 ms
+exit code: 1
+required : no
+
+--- stderr ---
+Error: Failed to fetch sha256 checksum at https://binaries.prisma.sh/all_commits/605197351a3c8bdd595af2d2a9bc3025bca48ea2/debian-openssl-3.0.x/libquery_engine.so.node.sha256 - 403 Forbidden
+
+If you need to ignore this error (e.g. in an offline environment), set the PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING environment variable to a truthy value.
+Example: PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+
+──────────────────────────────────────────────────────────────────────────────
+[03] typecheck — OK
+──────────────────────────────────────────────────────────────────────────────
+why      : A clean checkout must typecheck before anything else is believable. `tsx` strips types without checking them, so nothing else in this list would have caught a type error in the scripts.
+command  : npx tsc --noEmit
+started  : 2026-07-27T03:18:54.689Z
+duration : 3483 ms
+exit code: 0
+required : yes
+
+(no output)
+
+──────────────────────────────────────────────────────────────────────────────
+[04] lint — OK
+──────────────────────────────────────────────────────────────────────────────
+why      : Zero errors is the bar. Warnings that predate this work package are listed in docs/benchmark/README.md rather than suppressed.
+command  : npm run lint
+started  : 2026-07-27T03:18:58.173Z
+duration : 5967 ms
+exit code: 0
+required : yes
+
+--- stdout ---
+> edgepilot-ai@0.1.0 lint
+> eslint .
+
+
+/home/claude/work/eslint.config.mjs
+  4:1  warning  Assign array to a variable before exporting as module default  import/no-anonymous-default-export
+
+/home/claude/work/src/app/api/v1/devices/route.ts
+  12:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  42:27  warning  'request' is defined but never used          @typescript-eslint/no-unused-vars
+  45:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/claude/work/src/app/api/v1/workloads/route.ts
+  12:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  42:27  warning  'request' is defined but never used          @typescript-eslint/no-unused-vars
+  45:11  warning  'userId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/claude/work/src/modules/benchmark/core/services/ReadinessCalculator.ts
+  1:10  warning  'ReadinessScore' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 8 problems (0 errors, 8 warnings)
+
+──────────────────────────────────────────────────────────────────────────────
+[05] benchmark unit and integration tests — OK
+──────────────────────────────────────────────────────────────────────────────
+why      : The whole benchmark suite: normal, invalid, timeout and fallback paths. Run directly through jest rather than `npm test` so the vision `pretest` hook does not regenerate fixtures inside a clean-start capture.
+command  : npx jest tests/benchmark --ci
+started  : 2026-07-27T03:19:04.140Z
+duration : 2305 ms
+exit code: 0
+required : yes
+
+--- stderr ---
+PASS tests/benchmark/benchmarks-route.test.ts
+PASS tests/benchmark/run-benchmark.test.ts
+PASS tests/benchmark/groq-provider.test.ts
+PASS tests/benchmark/ollama-provider.test.ts
+PASS tests/benchmark/gemini-provider.test.ts
+PASS tests/benchmark/benchmark-runner.test.ts
+PASS tests/benchmark/provider-registry.test.ts
+PASS tests/benchmark/benchmark-config.test.ts
+PASS tests/benchmark/demo-provider.test.ts
+PASS tests/benchmark/provider-errors.test.ts
+PASS tests/benchmark/benchmark-measurement.test.ts
+
+Test Suites: 11 passed, 11 total
+Tests:       122 passed, 122 total
+Snapshots:   0 total
+Time:        1.408 s
+Ran all test suites matching /tests\/benchmark/i.
+
+──────────────────────────────────────────────────────────────────────────────
+[06] capture failure-mode evidence — OK
+──────────────────────────────────────────────────────────────────────────────
+why      : Regenerates evidence/benchmark/failure-modes.json and exits non-zero if any error classification or fallback decision stopped matching the documented table.
+command  : npm run bench:evidence:failures
+started  : 2026-07-27T03:19:06.445Z
+duration : 752 ms
+exit code: 0
+required : yes
+
+--- stdout ---
+> edgepilot-ai@0.1.0 bench:evidence:failures
+> node --import tsx scripts/benchmark/capture-failure-evidence.ts
+
+Wrote /home/claude/work/evidence/benchmark/failure-modes.json
+  8 classification scenarios, 8 fallback scenarios.
+  All behaved as documented.
+
+──────────────────────────────────────────────────────────────────────────────
+[07] production build — FAILED
+──────────────────────────────────────────────────────────────────────────────
+why      : Proves the Docker image will build. Optional, because it needs two things this module does not own: a generated Prisma client, and network access to Google Fonts for `next/font` in src/app/layout.tsx. Either being unavailable fails this step without anything being wrong with the code.
+command  : npm run build
+started  : 2026-07-27T03:19:07.198Z
+duration : 10939 ms
+exit code: 1
+required : no
+
+--- stdout ---
+> edgepilot-ai@0.1.0 prebuild
+> npm run vision:fixtures
+
+
+> edgepilot-ai@0.1.0 vision:fixtures
+> node scripts/vision-benchmark/generate-fixtures.mjs
+
+Generated and verified 21 vision fixtures.
+
+> edgepilot-ai@0.1.0 build
+> next build
+
+▲ Next.js 16.2.11 (Turbopack)
+
+  Creating an optimized production build ...
+
+--- stderr ---
+Turbopack build encountered 1 warnings:
+[next]/internal/font/google/inter_5972bc34.module.css
+Error while requesting resource
+There was an issue establishing a connection while requesting https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap
+
+Import trace:
+  Server Component:
+    [next]/internal/font/google/inter_5972bc34.module.css
+    [next]/internal/font/google/inter_5972bc34.js
+    ./src/app/layout.tsx
+
+
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+[next]/internal/font/google/inter_5972bc34.module.css
+next/font: error:
+Failed to fetch `Inter` from Google Fonts.
+
+Import trace:
+  Server Component:
+    [next]/internal/font/google/inter_5972bc34.module.css
+    [next]/internal/font/google/inter_5972bc34.js
+    ./src/app/layout.tsx
+
+
+    at ignore-listed frames
+
+==============================================================================
+End of capture.

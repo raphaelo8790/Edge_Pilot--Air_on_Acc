@@ -1,0 +1,74 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "simple_qa_query",
+      "modality": "text",
+      "complexity": "low",
+      "description": "Simple Q&A handling straightforward factual inquiries."
+    },
+    {
+      "id": 2,
+      "name": "summarization",
+      "modality": "text",
+      "complexity": "medium",
+      "description": "Summarization of textual data."
+    },
+    {
+      "id": 3,
+      "name": "code_generation",
+      "modality": "code",
+      "complexity": "medium",
+      "description": "Code Generation based on functional requirements."
+    },
+    {
+      "id": 4,
+      "name": "translation",
+      "modality": "text",
+      "complexity": "medium",
+      "description": "Translation of text between languages."
+    },
+    {
+      "id": 5,
+      "name": "sentiment_analysis",
+      "modality": "text",
+      "complexity": "low",
+      "description": "Sentiment Analysis of textual inputs."
+    },
+    {
+      "id": 6,
+      "name": "image_description",
+      "modality": "vision",
+      "complexity": "medium",
+      "description": "Image Description processing visual inputs."
+    },
+    {
+      "id": 7,
+      "name": "object_detection",
+      "modality": "vision",
+      "complexity": "high",
+      "description": "Object Detection across complex frames."
+    },
+    {
+      "id": 8,
+      "name": "data_analysis",
+      "modality": "code",
+      "complexity": "high",
+      "description": "Data Analysis utilizing programmatic scripts."
+    },
+    {
+      "id": 9,
+      "name": "creative_writing",
+      "modality": "text",
+      "complexity": "medium",
+      "description": "Creative Writing tasks producing narrative text."
+    },
+    {
+      "id": 10,
+      "name": "technical_explanation",
+      "modality": "text",
+      "complexity": "medium",
+      "description": "Technical Explanation breaking down advanced concepts."
+    }
+  ]
+}

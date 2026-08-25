@@ -1,0 +1,37 @@
+# What must never enter the build context.
+#
+# The first block is the important one: a .env copied into a layer stays in the
+# image even if a later layer deletes it, and `docker history` will show it.
+
+.env
+.env.*
+!.env.example
+
+# Build output and caches — regenerated inside the image, and copying them in
+# would let a stale host build shadow the fresh one.
+.next
+node_modules
+coverage
+*.tsbuildinfo
+
+# Version control and tooling.
+.git
+.gitignore
+.gitattributes
+.github
+.vscode
+.idea
+
+# Large artefacts that the running application does not read.
+evidence
+datasets
+docs
+*.log
+npm-debug.log*
+
+# Local-only files.
+device-profile.json
+benchmark-tasks.json
+Dockerfile
+docker-compose.yml
+README.md

@@ -1,0 +1,307 @@
+{
+  "schemaVersion": "1.0.0",
+  "workloadId": "construction-component-recognition-v1",
+  "workloadVersion": "1.0.0",
+  "datasetId": "edgepilot-synthetic-construction-components-v1",
+  "manifestVersion": "1.0.0",
+  "manifestSha256": "30fd92076bbfc13be4ceed672e1df62a8511c32755b695699296edf38a99dea1",
+  "preprocessingVersion": "sharp-png-v1",
+  "promptVersion": "1.0.0",
+  "executionMode": "controlled",
+  "provider": "gemini-controlled",
+  "providerKind": "cloud",
+  "model": "gemini-3.6-flash-fixture",
+  "deviceProfileId": "controlled-test-device",
+  "gitCommitSha": "0000000",
+  "startedAt": "2026-07-24T08:05:00.000Z",
+  "completedAt": "2026-07-24T08:05:04.000Z",
+  "records": [
+    {
+      "sampleId": "hardhat-01",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-02",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "hardhat-03",
+      "expectedLabel": "hardhat",
+      "rawOutput": "hardhat",
+      "normalizedLabel": "hardhat",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-01",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-02",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_vest-03",
+      "expectedLabel": "safety_vest",
+      "rawOutput": "safety_vest",
+      "normalizedLabel": "safety_vest",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-01",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-02",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "gloves-03",
+      "expectedLabel": "gloves",
+      "rawOutput": "gloves",
+      "normalizedLabel": "gloves",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-01",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-02",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "goggles-03",
+      "expectedLabel": "goggles",
+      "rawOutput": "goggles",
+      "normalizedLabel": "goggles",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-01",
+      "expectedLabel": "mask",
+      "rawOutput": "mask",
+      "normalizedLabel": "mask",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-02",
+      "expectedLabel": "mask",
+      "rawOutput": "mask",
+      "normalizedLabel": "mask",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "mask-03",
+      "expectedLabel": "mask",
+      "rawOutput": "mask",
+      "normalizedLabel": "mask",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-01",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-02",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "ladder-03",
+      "expectedLabel": "ladder",
+      "rawOutput": "ladder",
+      "normalizedLabel": "ladder",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-01",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 124,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-02",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 127,
+      "providerSuccess": true,
+      "errorCategory": null
+    },
+    {
+      "sampleId": "safety_cone-03",
+      "expectedLabel": "safety_cone",
+      "rawOutput": "safety_cone",
+      "normalizedLabel": "safety_cone",
+      "latencyMs": 130,
+      "providerSuccess": true,
+      "errorCategory": null
+    }
+  ],
+  "metrics": {
+    "totalSamples": 21,
+    "correctPredictions": 21,
+    "exactMatchAccuracy": 1,
+    "macroPrecision": 1,
+    "macroRecall": 1,
+    "macroF1": 1,
+    "invalidOutputRate": 0,
+    "successfulRequestRate": 1,
+    "medianLatencyMs": 127,
+    "p95LatencyMs": 130,
+    "throughputSamplesPerSecond": 7.874015748031496,
+    "perClass": [
+      {
+        "label": "hardhat",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "safety_vest",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "gloves",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "goggles",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "mask",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "ladder",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      },
+      {
+        "label": "safety_cone",
+        "truePositive": 3,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1,
+        "f1": 1,
+        "support": 3
+      }
+    ]
+  },
+  "thresholds": {
+    "minimumAccuracy": 0.8,
+    "minimumMacroF1": 0.75,
+    "maximumInvalidOutputRate": 0.05,
+    "minimumSuccessfulRequestRate": 0.95
+  },
+  "passed": true,
+  "limitations": [
+    "Predictions and latencies are deterministic controlled fixtures, not live provider measurements.",
+    "The dataset contains synthetic images and does not estimate production-site accuracy.",
+    "The commit marker is intentionally non-release provenance for generated controlled evidence.",
+    "Provider execution mode: cloud."
+  ]
+}
