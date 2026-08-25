@@ -20,6 +20,12 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   reactStrictMode: true,
 
+  // Hides Next's floating dev-tools badge, which sits in the bottom-left
+  // corner during `next dev`. It never appears in a production build, so this
+  // only affects what you see while developing — it is off because it
+  // overlaps the page's own bottom-left content.
+  devIndicators: false,
+
   turbopack: {
     root: projectRoot,
   },

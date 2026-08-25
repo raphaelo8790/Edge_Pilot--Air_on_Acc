@@ -7,6 +7,10 @@ import {
 import { VisionDashboardRow } from '@/modules/vision-benchmark/core/types';
 import { FileVisionEvidenceStore } from '@/modules/vision-benchmark/infrastructure/evidence-store';
 import { DatasetUpload } from '@/components/vision/DatasetUpload';
+import { ProviderLogo } from '@/components/dashboard/ProviderLogo';
+import { PaletteToggle } from '@/components/PaletteToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import '../dashboard/dashboard.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,45 +38,49 @@ export default async function VisionBenchmarkPage() {
   const best = rows[0];
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-slate-100">
+    <main className="min-h-dvh bg-ink-950 px-5 py-12 text-mist-100">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-12 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-cyan-400">
-              EdgePilot AI
+            <p className="ep-label ep-rise mb-4">
+              EdgePilot · vision module
             </p>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="ep-rise ep-rise-1 font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
               Vision benchmark comparison
             </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300">
+            <p className="ep-rise ep-rise-2 mt-4 max-w-2xl leading-relaxed text-mist-400">
               Compare local and cloud component-recognition runs using
               deterministic metrics, validated evidence, and the same
               21-image workload.
             </p>
           </div>
-          <Link
-            href="/"
-            className="w-fit rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-300"
-          >
-            Back to home
-          </Link>
+          <div className="ep-rise ep-rise-2 flex items-center gap-2">
+            <PaletteToggle className="rounded-lg border border-ink-600 px-3 py-2 text-xs text-mist-400 transition hover:border-pulse-500 hover:text-mist-100" />
+            <ThemeToggle className="rounded-lg border border-ink-600 px-3 py-2 text-sm text-mist-400 transition hover:border-pulse-500 hover:text-mist-100" />
+            <Link
+              href="/"
+              className="w-fit rounded-lg border border-ink-600 px-4 py-2 text-sm font-semibold text-mist-300 transition hover:border-pulse-500 hover:text-mist-100 active:translate-y-px"
+            >
+              ← Back to home
+            </Link>
+          </div>
         </div>
 
-        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="ep-rise ep-rise-3 mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard
-            label="Recorded runs"
+            label="recorded runs"
             value={String(rows.length)}
           />
           <MetricCard
-            label="Best accuracy"
+            label="best accuracy"
             value={best ? percent(best.accuracy) : 'No data'}
           />
           <MetricCard
-            label="Best macro F1"
+            label="best macro F1"
             value={best ? percent(best.macroF1) : 'No data'}
           />
           <MetricCard
-            label="Fastest P95"
+            label="fastest P95"
             value={
               rows.length > 0
                 ? milliseconds(
@@ -83,25 +91,25 @@ export default async function VisionBenchmarkPage() {
           />
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-cyan-950/20">
-          <div className="border-b border-slate-800 px-6 py-5">
-            <h2 className="text-xl font-semibold">
+        <section className="ep-rise ep-rise-4 overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
+          <div className="border-b border-ink-700 px-6 py-5">
+            <h2 className="font-display text-xl font-semibold tracking-tight">
               Provider evidence
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-mist-400">
               Controlled rows prove the integration path; live rows are
               created only by authenticated provider execution.
             </p>
           </div>
 
           {rows.length === 0 ? (
-            <div className="px-6 py-14 text-center text-slate-400">
+            <div className="px-6 py-14 text-center text-mist-400">
               No validated evidence files are available.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] text-left text-sm">
-                <thead className="bg-slate-950/70 text-xs uppercase tracking-wider text-slate-400">
+                <thead className="ep-mono bg-ink-950/70 text-[11px] uppercase tracking-wider text-mist-500">
                   <tr>
                     <TableHeading>Provider</TableHeading>
                     <TableHeading>Mode</TableHeading>
@@ -116,22 +124,26 @@ export default async function VisionBenchmarkPage() {
                     <TableHeading>Gate</TableHeading>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-ink-700/70">
                   {rows.map((row) => (
                     <tr
                       key={`${row.provider}-${row.model}-${row.completedAt}`}
-                      className="transition hover:bg-slate-800/50"
+                      className="transition hover:bg-ink-800/50"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-slate-100">
+                        <div className="flex items-center gap-2 font-semibold text-mist-100">
+                          <ProviderLogo
+                            provider={row.provider.split('-')[0]}
+                            size={16}
+                          />
                           {row.provider}
                         </div>
-                        <div className="mt-1 text-xs text-slate-500">
+                        <div className="ep-mono mt-1 text-xs text-mist-600">
                           {row.model}
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="rounded-full border border-slate-700 bg-slate-950 px-2.5 py-1 text-xs font-medium text-slate-300">
+                        <span className="ep-mono rounded-md border border-ink-600 bg-ink-950 px-2.5 py-1 text-xs text-mist-300">
                           {row.providerKind} · {row.executionMode}
                         </span>
                       </td>
@@ -157,8 +169,8 @@ export default async function VisionBenchmarkPage() {
                         <span
                           className={
                             row.passed
-                              ? 'rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-300'
-                              : 'rounded-full bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-300'
+                              ? 'rounded-md border border-good-400/40 bg-good-400/10 px-2.5 py-1 text-xs font-semibold text-good-400'
+                              : 'rounded-md border border-bad-400/40 bg-bad-400/10 px-2.5 py-1 text-xs font-semibold text-bad-400'
                           }
                         >
                           {row.passed ? 'Pass' : 'Fail'}
@@ -193,7 +205,7 @@ export default async function VisionBenchmarkPage() {
           their own Ollama. See DatasetUpload for why that is a requirement
           rather than a convenience.
         */}
-        <section className="epd mt-10">
+        <section className="epd mt-10 overflow-hidden rounded-2xl">
           <DatasetUpload host="http://localhost:11434" />
         </section>
       </div>
@@ -209,20 +221,22 @@ function MetricCard({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+    <div className="ep-panel p-5">
+      <p className="ep-mono text-[11px] uppercase tracking-wider text-mist-500">
+        {label}
+      </p>
+      <p className="ep-mono mt-2 text-2xl font-medium text-mist-100">{value}</p>
     </div>
   );
 }
 
 function TableHeading({ children }: { children: React.ReactNode }) {
-  return <th className="px-5 py-3 font-semibold">{children}</th>;
+  return <th className="px-5 py-3 font-medium">{children}</th>;
 }
 
 function TableValue({ children }: { children: React.ReactNode }) {
   return (
-    <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-200">
+    <td className="ep-mono whitespace-nowrap px-5 py-4 text-mist-300">
       {children}
     </td>
   );
@@ -236,9 +250,9 @@ function Guardrail({
   text: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-5">
-      <h3 className="font-semibold text-cyan-300">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+    <div className="rounded-xl border border-ink-700/60 bg-ink-900/60 p-5">
+      <h3 className="font-display font-semibold text-pulse-300">{title}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-mist-400">{text}</p>
     </div>
   );
 }

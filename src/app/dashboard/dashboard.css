@@ -5,32 +5,32 @@
    color follows the provider entity, never rank or state. */
 
 .epd {
-  --surface-0: #f4f4f2;
-  --surface-1: #fcfcfb;
-  --surface-2: #ffffff;
-  --border: #e2e1dd;
-  --border-strong: #c9c8c2;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #83827c;
-  --accent: #2a78d6;
-  --accent-ink: #ffffff;
+  /* Amber-cockpit palette, shared hue family with globals.css.
+     Dark is the default; the light set lives under [data-theme='light']. */
+  --surface-0: #0e0c09;
+  --surface-1: #16130e;
+  --surface-2: #211b12;
+  --border: #2c261c;
+  --border-strong: #453b29;
+  --text-primary: #efe9dc;
+  --text-secondary: #cec3ad;
+  --text-muted: #ab9e83;
+  --accent: #e8a33d;
+  --accent-ink: #1c1000;
 
-  /* provider slots (fixed): ollama=blue, gemini=aqua, groq=yellow */
-  --series-ollama: #2a78d6;
-  --series-gemini: #1baf7a;
-  --series-groq: #eda100;
+  /* warn leans orange-red so it never blends into the amber accent */
+  --status-good: #4fb56b;
+  --status-good-bg: #17281a;
+  --status-warn: #e0783f;
+  --status-warn-bg: #33200f;
+  --status-serious: #e06c66;
+  --status-serious-bg: #351a1c;
 
-  --status-good: #008300;
-  --status-good-bg: #e7f3e7;
-  --status-warn: #9a6700;
-  --status-warn-bg: #fff3d6;
-  --status-serious: #c93c37;
-  --status-serious-bg: #fdebea;
-
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.05);
+  --radius: 12px;
+  --radius-sm: 8px;
+  /* last layer is the halo: a faint amber glow behind every card */
+  --shadow: 0 1px 2px rgba(5, 3, 1, 0.5), 0 10px 28px -12px rgba(5, 3, 1, 0.6),
+    0 0 70px -18px rgba(232, 163, 61, 0.2);
 
   background: var(--surface-0);
   color: var(--text-primary);
@@ -39,30 +39,81 @@
   line-height: 1.55;
 }
 
-@media (prefers-color-scheme: dark) {
-  .epd {
-    --surface-0: #121211;
-    --surface-1: #1a1a19;
-    --surface-2: #232322;
-    --border: #35342f;
-    --border-strong: #4a4943;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #8f8e85;
-    --accent: #3987e5;
+/* Light theme for the dashboard module — driven by the same data-theme
+   attribute the ThemeToggle sets on <html>, so one button flips the whole
+   product. Series colours are darkened just enough to hold on white while
+   staying the same recognisable hues (colour follows the provider entity). */
+:root[data-theme='light'] .epd {
+  --surface-0: #f7f4ee;
+  --surface-1: #fcfaf5;
+  --surface-2: #ffffff;
+  --border: #e4dcc9;
+  --border-strong: #d0c5aa;
+  --text-primary: #1c1710;
+  --text-secondary: #4d4536;
+  --text-muted: #75694f;
+  --accent: #a3641a;
+  --accent-ink: #ffffff;
 
-    --series-ollama: #3987e5;
-    --series-gemini: #199e70;
-    --series-groq: #c98500;
+  --status-good: #1e7d3f;
+  --status-good-bg: #e7f1e6;
+  --status-warn: #b4531f;
+  --status-warn-bg: #fbecd9;
+  --status-serious: #c43f38;
+  --status-serious-bg: #fdeceb;
 
-    --status-good: #43a047;
-    --status-good-bg: #16311a;
-    --status-warn: #d9a514;
-    --status-warn-bg: #33290d;
-    --status-serious: #e66767;
-    --status-serious-bg: #3a1a19;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
-  }
+  --shadow: 0 1px 2px rgba(28, 23, 16, 0.06), 0 8px 24px -12px rgba(28, 23, 16, 0.12),
+    0 0 60px -18px rgba(163, 100, 26, 0.14);
+}
+
+/* ---- ARCADE palette · dark = PAC-MAN cabinet ---- */
+:root[data-palette='arcade'] .epd {
+  --surface-0: #06060a;
+  --surface-1: #0d0d18;
+  --surface-2: #141430;
+  --border: #23237a; /* maze wall blue */
+  --border-strong: #3232a8;
+  --text-primary: #fdf6dd; /* pellet cream */
+  --text-secondary: #ded6b8;
+  --text-muted: #a79f85;
+  --accent: #ffcc00; /* Pac-Man yellow */
+  --accent-ink: #1a1400;
+
+  --status-good: #4ade80;
+  --status-good-bg: #08240f;
+  --status-warn: #ffb847; /* Clyde */
+  --status-warn-bg: #2d1e05;
+  --status-serious: #ff5555; /* Blinky */
+  --status-serious-bg: #2e0d0d;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 10px 28px -12px rgba(0, 0, 0, 0.7),
+    0 0 70px -18px rgba(255, 204, 0, 0.22);
+}
+
+/* ---- ARCADE palette · light = SUPER MARIO overworld ---- */
+:root[data-palette='arcade'][data-theme='light'] .epd {
+  --surface-0: #dfefff; /* sky */
+  --surface-1: #f4faff;
+  --surface-2: #ffffff; /* cloud */
+  --border: #c8dff5;
+  --border-strong: #a8c7e8;
+  /* Black body text, neutral greys below it — see globals.css for why this
+     palette drops the navy tint the others use. */
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --text-muted: #5c5c5c;
+  --accent: #d8231d; /* Mario red */
+  --accent-ink: #ffffff;
+
+  --status-good: #1f8a3e; /* pipe green */
+  --status-good-bg: #e4f5e8;
+  --status-warn: #b06e12; /* coin */
+  --status-warn-bg: #fdf0d6;
+  --status-serious: #c0271f;
+  --status-serious-bg: #fdeae8;
+
+  --shadow: 0 1px 2px rgba(27, 36, 64, 0.07), 0 8px 24px -12px rgba(27, 36, 64, 0.16),
+    0 0 60px -20px rgba(216, 35, 29, 0.16);
 }
 
 .epd *,
@@ -95,7 +146,11 @@
 
 /* layout */
 .epd .epd-header {
-  background: var(--surface-1);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in oklab, var(--surface-0) 82%, transparent);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   padding: 14px 24px;
   display: flex;
@@ -104,8 +159,10 @@
   flex-wrap: wrap;
 }
 .epd .epd-brand {
+  font-family: var(--font-display, inherit);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .epd .epd-brand span {
   color: var(--accent);
@@ -189,7 +246,9 @@
 }
 .epd .card h2 {
   margin: 0 0 4px;
+  font-family: var(--font-display, inherit);
   font-size: 18px;
+  letter-spacing: -0.01em;
 }
 .epd .card h3 {
   margin: 18px 0 8px;
@@ -215,8 +274,18 @@
     grid-column: span 2;
   }
 }
+/* Flex rather than block, and a floor on the height, so a label containing an
+   inline icon is exactly as tall as one containing only words.
+
+   As a block, an inline SVG sits in the text's line box and its height plus
+   any vertical-align offset STRETCHES that box — the compare page's provider
+   label (logo + text) measured 35px against the plain "Model" label's 20px,
+   which pushed its select 15px lower than the one beside it in the same grid
+   row. Flex takes the icon out of the line box and centres it instead. */
 .epd .field label {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 20px;
   font-weight: 600;
   font-size: 13px;
   margin-bottom: 4px;
@@ -225,6 +294,15 @@
   color: var(--text-muted);
   font-size: 12px;
   margin: 2px 0 6px;
+}
+/* A hint placed AFTER its control explains it rather than introducing it, so
+   the spacing flips. Putting the prose above instead pushes the control down
+   by however long the prose happens to be, which is what knocked the task
+   select and the iterations input out of line with each other. */
+.epd .field select + .hint,
+.epd .field input + .hint,
+.epd .field textarea + .hint {
+  margin: 6px 0 0;
 }
 .epd .field input,
 .epd .field select,
@@ -317,8 +395,18 @@
   font-size: 14px;
   cursor: pointer;
 }
+.epd .btn {
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
 .epd .btn:hover {
   border-color: var(--accent);
+}
+.epd .btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.epd .btn-primary:hover {
+  background: color-mix(in oklab, var(--accent) 85%, #ffffff);
+  border-color: color-mix(in oklab, var(--accent) 85%, #ffffff);
 }
 .epd .btn:disabled {
   opacity: 0.5;
@@ -370,13 +458,6 @@
   color: var(--status-serious);
   border-color: var(--status-serious);
 }
-.epd .swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex: none;
-}
 
 /* tables */
 .epd .table-wrap {
@@ -409,6 +490,10 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.epd td.num {
+  font-family: var(--font-mono, inherit);
+  font-size: 12.5px;
+}
 
 /* stat tiles */
 .epd .stat-row {
@@ -434,8 +519,9 @@
   margin: 0;
 }
 .epd .stat-value {
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--font-mono, inherit);
+  font-size: 21px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   margin: 0;
 }
@@ -514,6 +600,12 @@
 .epd .state-error .state-title {
   color: var(--status-serious);
 }
+.epd .state-unavailable {
+  border-color: var(--status-warn);
+}
+.epd .state-unavailable .state-title {
+  color: var(--status-warn);
+}
 .epd .spinner {
   display: inline-block;
   width: 22px;
@@ -574,6 +666,280 @@
   margin: 3px 0;
 }
 
+/* ---- the grazing llama ----
+   Shown only when the local runtime is up with models. The neck swings down
+   to the grass, chews twice, and comes back up. Rotation lives on the neck
+   group alone so the body stays where it is — transform-box: view-box is what
+   makes transform-origin resolve against the SVG's own coordinates rather
+   than the element's border box. */
+
+.epd .llama-scene {
+  margin: 0 0 10px;
+  line-height: 0;
+}
+
+.epd .llama-neck {
+  transform-box: view-box;
+  transform-origin: 47px 30px;
+  animation: llama-graze 5.4s ease-in-out infinite;
+}
+
+@keyframes llama-graze {
+  0%,
+  12% {
+    transform: rotate(0deg);
+  }
+  /* down to the grass */
+  30%,
+  40% {
+    transform: rotate(76deg);
+  }
+  /* two chews, without lifting all the way */
+  46% {
+    transform: rotate(67deg);
+  }
+  52% {
+    transform: rotate(76deg);
+  }
+  58% {
+    transform: rotate(67deg);
+  }
+  64%,
+  74% {
+    transform: rotate(76deg);
+  }
+  /* back up, and a pause before going again */
+  88%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* the tuft leans as it is cropped */
+.epd .llama-grass {
+  transform-box: view-box;
+  transform-origin: 70px 46px;
+  animation: llama-grass-sway 5.4s ease-in-out infinite;
+}
+
+@keyframes llama-grass-sway {
+  0%,
+  24% {
+    transform: rotate(0deg);
+  }
+  40%,
+  74% {
+    transform: rotate(-7deg);
+  }
+  88%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .epd .llama-neck,
+  .epd .llama-grass {
+    animation: none;
+  }
+}
+
+/* ---- sleeping models ----
+   A model Ollama has unloaded is installed but not in memory, so the next
+   call pays to read it off disk. The original palette stays quiet about it;
+   the arcade palette puts the llama to bed. Hidden by default so the marker
+   cannot leak into the instrument theme. */
+.epd .llama-bed {
+  display: none;
+}
+
+:root[data-palette='arcade'] .epd .llama-bed {
+  display: inline-block;
+  margin-left: 7px;
+  vertical-align: -6px;
+  line-height: 0;
+}
+
+/* the sleeper breathes: the whole scene rises and settles */
+:root[data-palette='arcade'] .epd .llama-bed svg {
+  transform-box: view-box;
+  transform-origin: 19px 20px;
+  animation: llama-breathe 3.4s ease-in-out infinite;
+}
+
+@keyframes llama-breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.05);
+  }
+}
+
+/* and one z drifts off */
+.epd .llama-bed-z {
+  animation: llama-z-drift 2.6s ease-in-out infinite;
+  transform-box: view-box;
+}
+
+@keyframes llama-z-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 2px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(4px, -8px);
+  }
+}
+
+/* ---- the lost llama ----
+   Shown when the runtime could not be found at all. The head swings as it
+   looks around and the map tilts; the question mark bobs above. */
+.epd .llama-lost {
+  margin: 2px 0 10px;
+  line-height: 0;
+}
+
+.epd .llama-lost-neck {
+  transform-box: view-box;
+  transform-origin: 50px 34px;
+  animation: llama-searching 4.6s ease-in-out infinite;
+}
+
+@keyframes llama-searching {
+  0%,
+  100% {
+    transform: rotate(-9deg);
+  }
+  35% {
+    transform: rotate(7deg);
+  }
+  70% {
+    transform: rotate(-4deg);
+  }
+}
+
+.epd .llama-map {
+  transform-box: view-box;
+  transform-origin: 65px 29px;
+  animation: llama-map-tilt 4.6s ease-in-out infinite;
+}
+
+@keyframes llama-map-tilt {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+
+.epd .llama-question {
+  transform-box: view-box;
+  animation: llama-question-bob 2.3s ease-in-out infinite;
+}
+
+@keyframes llama-question-bob {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(2px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-palette='arcade'] .epd .llama-bed svg,
+  .epd .llama-bed-z,
+  .epd .llama-lost-neck,
+  .epd .llama-map,
+  .epd .llama-question {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* evaluation matrix cases */
+.epd .matrix-case {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+.epd .matrix-case-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.epd .matrix-case-head h3 {
+  flex: 1 1 320px;
+  margin: 0;
+}
+.epd .matrix-case-id {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex: none;
+}
+.epd .matrix-expected {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 8px 0 10px;
+  max-width: 72ch;
+}
+.epd .matrix-io {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 760px) {
+  .epd .matrix-io {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.epd .matrix-io details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: 8px 10px;
+}
+.epd .matrix-io summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.epd .matrix-io details[open] summary {
+  margin-bottom: 8px;
+}
+.epd .code-block {
+  font-family: var(--font-mono, monospace);
+  font-size: 11.5px;
+  line-height: 1.5;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin: 0;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text-secondary);
+}
+
 /* Pre-send confirmation. Deliberately blocking: a prompt that has left the
    machine cannot be recalled, so this is the last moment the decision is
    still the user's. */
@@ -587,6 +953,12 @@
   justify-content: center;
   padding: 20px;
   z-index: 50;
+}
+/* severity comes from describeEgressWarning: 'warning' (internet) keeps the
+   amber border; 'notice' (own network) is calmer on purpose so the internet
+   one stays alarming by contrast. */
+.egress-dialog.egress-notice {
+  border-color: var(--border-strong, #4a4943);
 }
 .egress-dialog {
   background: var(--surface-1, #14161a);
