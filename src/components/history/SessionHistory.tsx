@@ -14,7 +14,7 @@
  * components/dashboard/session.ts states.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { DatabaseStatus } from './DatabaseStatus';
 import {
@@ -25,14 +25,12 @@ import {
 } from '@/components/dashboard/api';
 import { VISION_DATASET_ID } from '@/modules/vision-benchmark/core/types';
 import {
-  readRuns,
-  readBenchmarkRuns,
+  useStoredRuns,
+  useStoredBenchmarkRuns,
   clearBenchmarkRuns,
-  readComparisonRuns,
+  useStoredComparisonRuns,
   clearComparisonRuns,
   type StoredVisionRun,
-  type StoredBenchmarkRun,
-  type StoredComparisonRun,
 } from '@/components/vision/runHistory';
 
 const notReported = '—';
@@ -68,19 +66,15 @@ function isShareable(run: StoredVisionRun): boolean {
 }
 
 export function SessionHistory() {
-  const [runs, setRuns] = useState<StoredVisionRun[]>([]);
-  const [benchRuns, setBenchRuns] = useState<StoredBenchmarkRun[]>([]);
-  const [comparisons, setComparisons] = useState<StoredComparisonRun[]>([]);
+  // Empty on the server and on first paint, then whatever this browser holds.
+  // The store notifies on add/clear, so no local copy of the list is needed.
+  const runs = useStoredRuns();
+  const benchRuns = useStoredBenchmarkRuns();
+  const comparisons = useStoredComparisonRuns();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<SharePreview | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setRuns(readRuns());
-    setBenchRuns(readBenchmarkRuns());
-    setComparisons(readComparisonRuns());
-  }, []);
 
   const shareable = useMemo(() => runs.filter(isShareable).length, [runs]);
 
@@ -288,7 +282,6 @@ export function SessionHistory() {
                 className="btn"
                 onClick={() => {
                   clearBenchmarkRuns();
-                  setBenchRuns([]);
                 }}
               >
                 Clear these
@@ -400,7 +393,6 @@ export function SessionHistory() {
                 className="btn"
                 onClick={() => {
                   clearComparisonRuns();
-                  setComparisons([]);
                 }}
               >
                 Clear these

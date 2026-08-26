@@ -29,9 +29,8 @@ import type { VisionBenchmarkEvidence } from '@/modules/vision-benchmark/core/ty
 import {
   addRun,
   clearRuns,
-  readRuns,
+  useStoredRuns,
   MAX_STORED_RUNS,
-  type StoredVisionRun,
 } from './runHistory';
 import { ThresholdNote } from './ThresholdNote';
 
@@ -101,14 +100,8 @@ export function RunBuiltInDataset() {
   const [model, setModel] = useState('');
   const [runtimeNote, setRuntimeNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [runs, setRuns] = useState<StoredVisionRun[]>([]);
+  const runs = useStoredRuns();
   const [pending, startTransition] = useTransition();
-
-  // Read after mount, never during render: the server has no localStorage, and
-  // reading it while rendering would make the markup disagree with the client.
-  useEffect(() => {
-    setRuns(readRuns());
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +184,7 @@ export function RunBuiltInDataset() {
         return;
       }
 
-      setRuns(addRun(result.evidence));
+      addRun(result.evidence);
     });
   }
 
@@ -255,7 +248,6 @@ export function RunBuiltInDataset() {
             disabled={pending}
             onClick={() => {
               clearRuns();
-              setRuns([]);
             }}
           >
             Clear my runs

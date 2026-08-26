@@ -48,11 +48,9 @@ function text(value: unknown): string | null {
 export function DatabaseStatus() {
   const [state, setState] = useState<State>(initial);
 
-  const check = useCallback(async () => {
-    setState((current) => ({ ...current, loading: true }));
-
-    const outcome = await getDatabaseHealth();
-
+  // Applies one answer from the server. Only ever called from a promise
+  // callback, so it never runs synchronously inside render or an effect.
+  const apply = useCallback((outcome: Awaited<ReturnType<typeof getDatabaseHealth>>) => {
     if (outcome.ok) {
       const meta = outcome.meta as Record<string, unknown> | undefined;
 
@@ -80,9 +78,17 @@ export function DatabaseStatus() {
     });
   }, []);
 
+  // The initial state is already `loading: true`, so the mount-time check has
+  // nothing to set until the answer arrives.
   useEffect(() => {
-    void check();
-  }, [check]);
+    void getDatabaseHealth().then(apply);
+  }, [apply]);
+
+  // The Retry button: show the spinner again, then ask again.
+  const check = useCallback(() => {
+    setState((current) => ({ ...current, loading: true }));
+    void getDatabaseHealth().then(apply);
+  }, [apply]);
 
   const health = state.health;
   const connected = health?.connected === true;

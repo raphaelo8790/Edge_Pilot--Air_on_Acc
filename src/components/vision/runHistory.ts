@@ -21,6 +21,7 @@ import type {
   BenchmarkRun,
   ComparisonResultDto,
 } from '@/components/dashboard/api';
+import { useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'edgepilot.vision-runs';
 const BENCHMARK_KEY = 'edgepilot.benchmark-runs';
@@ -33,62 +34,165 @@ const COMPARISON_KEY = 'edgepilot.comparison-runs';
  */
 export const MAX_STORED_RUNS = 20;
 
+// ---------------------------------------------------------------------------
+// A localStorage-backed list React can subscribe to
+//
+// WHY A STORE AND NOT "READ IT IN AN EFFECT". The server has no localStorage,
+// so the first render must show an empty list and the real one must arrive
+// only on the client. Doing that with `useEffect(() => setRuns(readRuns()))`
+// renders twice and is flagged by the React Compiler lint rule
+// (react-hooks/set-state-in-effect). `useSyncExternalStore` is the API React
+// provides for exactly this shape: a value that lives outside React, with a
+// server snapshot (empty) and a client snapshot (whatever is stored).
+//
+// SNAPSHOTS ARE CACHED. `useSyncExternalStore` compares snapshots by identity,
+// so `getSnapshot` must return the same array until the data actually changes.
+// The cache is keyed on the raw string in storage: unchanged string, same
+// array. A change made in another tab therefore shows up on the next read.
+// ---------------------------------------------------------------------------
+
+interface Stored {
+  storedAt: number;
+}
+
+const EMPTY: never[] = [];
+
+function createStore<T extends Stored>(key: string, isEntry: (e: unknown) => e is T) {
+  const listeners = new Set<() => void>();
+  let cachedRaw: string | null | undefined; // undefined = never read
+  let cachedValue: T[] = EMPTY;
+
+  function parse(raw: string | null): T[] {
+    if (!raw) return EMPTY;
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return EMPTY;
+
+      // Anything that does not look like a run is dropped rather than
+      // rendered. Stored data outlives code, and a shape from an older version
+      // must not take the page down.
+      return parsed.filter(isEntry);
+    } catch {
+      return EMPTY;
+    }
+  }
+
+  function rawNow(): string | null {
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function read(): T[] {
+    if (typeof window === 'undefined') return EMPTY;
+
+    const raw = rawNow();
+    if (cachedRaw === undefined || raw !== cachedRaw) {
+      cachedRaw = raw;
+      cachedValue = parse(raw);
+    }
+    return cachedValue;
+  }
+
+  function notify() {
+    listeners.forEach((listener) => listener());
+  }
+
+  /** Newest first, capped. Returns the list as it now stands. */
+  function add(entry: T): T[] {
+    const next = [entry, ...read()].slice(0, MAX_STORED_RUNS);
+
+    try {
+      const raw = JSON.stringify(next);
+      window.localStorage.setItem(key, raw);
+      cachedRaw = raw;
+    } catch {
+      // Full, or blocked. The run still shows on screen for this visit; it
+      // just will not survive a reload. Silently losing it is better than
+      // throwing away a measurement that already cost real GPU time.
+      // `cachedRaw` stays as what storage really holds, so `read()` keeps
+      // returning this in-memory list until storage genuinely changes.
+    }
+
+    cachedValue = next;
+    notify();
+    return next;
+  }
+
+  function clear(): void {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      /* nothing to do - the caller re-reads and gets whatever is really there */
+    }
+
+    cachedRaw = rawNow();
+    cachedValue = EMPTY;
+    notify();
+  }
+
+  function subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+
+    // Another tab writing the same key fires `storage` here.
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === key) listener();
+    };
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      listeners.delete(listener);
+      window.removeEventListener('storage', onStorage);
+    };
+  }
+
+  function getServerSnapshot(): T[] {
+    return EMPTY;
+  }
+
+  function use(): T[] {
+    return useSyncExternalStore(subscribe, read, getServerSnapshot);
+  }
+
+  return { read, add, clear, use };
+}
+
+function isStored(entry: unknown, field: string): boolean {
+  return (
+    typeof entry === 'object' &&
+    entry !== null &&
+    typeof (entry as Stored).storedAt === 'number' &&
+    typeof (entry as Record<string, unknown>)[field] === 'object' &&
+    (entry as Record<string, unknown>)[field] !== null
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Vision runs
+// ---------------------------------------------------------------------------
+
 export interface StoredVisionRun {
   /** Milliseconds since epoch, stamped when it was stored. */
   storedAt: number;
   evidence: VisionBenchmarkEvidence;
 }
 
-export function readRuns(): StoredVisionRun[] {
-  if (typeof window === 'undefined') return [];
+const visionStore = createStore<StoredVisionRun>(
+  STORAGE_KEY,
+  (e): e is StoredVisionRun => isStored(e, 'evidence')
+);
 
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    // Anything that does not look like a run is dropped rather than rendered.
-    // Stored data outlives code, and a shape from an older version must not
-    // take the page down.
-    return parsed.filter(
-      (entry): entry is StoredVisionRun =>
-        typeof entry === 'object' &&
-        entry !== null &&
-        typeof (entry as StoredVisionRun).storedAt === 'number' &&
-        typeof (entry as StoredVisionRun).evidence === 'object' &&
-        (entry as StoredVisionRun).evidence !== null
-    );
-  } catch {
-    return [];
-  }
-}
+export const readRuns = visionStore.read;
+export const clearRuns = visionStore.clear;
+/** Subscribe a component to the list. Empty on the server and first paint. */
+export const useStoredRuns = visionStore.use;
 
 /** Newest first, capped. Returns the list as it now stands. */
 export function addRun(evidence: VisionBenchmarkEvidence): StoredVisionRun[] {
-  const next = [{ storedAt: Date.now(), evidence }, ...readRuns()].slice(
-    0,
-    MAX_STORED_RUNS
-  );
-
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Full, or blocked. The run still shows on screen for this visit; it just
-    // will not survive a reload. Silently losing it is better than throwing
-    // away a measurement that already cost real GPU time.
-  }
-
-  return next;
-}
-
-export function clearRuns(): void {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* nothing to do - the caller re-reads and gets whatever is really there */
-  }
+  return visionStore.add({ storedAt: Date.now(), evidence });
 }
 
 // ---------------------------------------------------------------------------
@@ -104,50 +208,17 @@ export interface StoredBenchmarkRun {
   run: BenchmarkRun;
 }
 
-export function readBenchmarkRuns(): StoredBenchmarkRun[] {
-  if (typeof window === 'undefined') return [];
+const benchmarkStore = createStore<StoredBenchmarkRun>(
+  BENCHMARK_KEY,
+  (e): e is StoredBenchmarkRun => isStored(e, 'run')
+);
 
-  try {
-    const raw = window.localStorage.getItem(BENCHMARK_KEY);
-    if (!raw) return [];
-
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(
-      (entry): entry is StoredBenchmarkRun =>
-        typeof entry === 'object' &&
-        entry !== null &&
-        typeof (entry as StoredBenchmarkRun).storedAt === 'number' &&
-        typeof (entry as StoredBenchmarkRun).run === 'object' &&
-        (entry as StoredBenchmarkRun).run !== null
-    );
-  } catch {
-    return [];
-  }
-}
+export const readBenchmarkRuns = benchmarkStore.read;
+export const clearBenchmarkRuns = benchmarkStore.clear;
+export const useStoredBenchmarkRuns = benchmarkStore.use;
 
 export function addBenchmarkRun(run: BenchmarkRun): StoredBenchmarkRun[] {
-  const next = [{ storedAt: Date.now(), run }, ...readBenchmarkRuns()].slice(
-    0,
-    MAX_STORED_RUNS
-  );
-
-  try {
-    window.localStorage.setItem(BENCHMARK_KEY, JSON.stringify(next));
-  } catch {
-    /* full or blocked - the run still shows on screen for this visit */
-  }
-
-  return next;
-}
-
-export function clearBenchmarkRuns(): void {
-  try {
-    window.localStorage.removeItem(BENCHMARK_KEY);
-  } catch {
-    /* nothing to do */
-  }
+  return benchmarkStore.add({ storedAt: Date.now(), run });
 }
 
 // ---------------------------------------------------------------------------
@@ -163,50 +234,17 @@ export interface StoredComparisonRun {
   comparison: ComparisonResultDto;
 }
 
-export function readComparisonRuns(): StoredComparisonRun[] {
-  if (typeof window === 'undefined') return [];
+const comparisonStore = createStore<StoredComparisonRun>(
+  COMPARISON_KEY,
+  (e): e is StoredComparisonRun => isStored(e, 'comparison')
+);
 
-  try {
-    const raw = window.localStorage.getItem(COMPARISON_KEY);
-    if (!raw) return [];
-
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter(
-      (entry): entry is StoredComparisonRun =>
-        typeof entry === 'object' &&
-        entry !== null &&
-        typeof (entry as StoredComparisonRun).storedAt === 'number' &&
-        typeof (entry as StoredComparisonRun).comparison === 'object' &&
-        (entry as StoredComparisonRun).comparison !== null
-    );
-  } catch {
-    return [];
-  }
-}
+export const readComparisonRuns = comparisonStore.read;
+export const clearComparisonRuns = comparisonStore.clear;
+export const useStoredComparisonRuns = comparisonStore.use;
 
 export function addComparisonRun(
   comparison: ComparisonResultDto
 ): StoredComparisonRun[] {
-  const next = [
-    { storedAt: Date.now(), comparison },
-    ...readComparisonRuns(),
-  ].slice(0, MAX_STORED_RUNS);
-
-  try {
-    window.localStorage.setItem(COMPARISON_KEY, JSON.stringify(next));
-  } catch {
-    /* full or blocked - it still shows on screen for this visit */
-  }
-
-  return next;
-}
-
-export function clearComparisonRuns(): void {
-  try {
-    window.localStorage.removeItem(COMPARISON_KEY);
-  } catch {
-    /* nothing to do */
-  }
+  return comparisonStore.add({ storedAt: Date.now(), comparison });
 }
