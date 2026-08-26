@@ -35,7 +35,7 @@ standalone output setting the Dockerfile depends on.
 | `AI_USAGE.md` | Required submission item: how AI assistance was used per work package, and how the result was verified. One section per work package |
 | `LICENSE` | Licensing for the whole repository: this work under AGPL-3.0-or-later, and the imported baseline's MIT notice retained as that licence requires |
 | `LICENSES/` | The full texts - `AGPL-3.0.txt` and `MIT.txt` |
-| `package.json` | Dependencies and the 31 npm scripts. `prebuild` and `pretest` regenerate the vision fixtures, so a build and a test run both start from a known dataset |
+| `package.json` | Dependencies and the 31 npm scripts. `prebuild` and `pretest` regenerate the vision fixtures, so a build and a test run both start from a known dataset; `build` runs `prisma generate` first, because a hosted build restores cached dependencies and skips Prisma's install step |
 | `package-lock.json` | Exact dependency tree. Committed so CI and a laptop install the same bytes |
 | `tsconfig.json` | TypeScript configuration. Note `target: es5` - it is why spreading a `Map`, `Set` or typed array is unsafe in this codebase |
 | `next.config.mjs` | Next.js configuration, including `output: 'standalone'` for the container image |
