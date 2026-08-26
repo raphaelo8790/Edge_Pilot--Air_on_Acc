@@ -30,6 +30,8 @@ The input and output format fields became read-only derived text - an
 informant, not a control. They describe what the chosen task sends and returns;
 they were never things a user could meaningfully change.
 
+**Hosted-mode pass.** `InstalledModels`, `ProviderPanel` and `DashboardApp` ask the visitor's own Ollama from the browser instead of the server; `ProviderPanel` lists Gemini and Groq models from the vendors (`getProviderModels`) rather than a free-text box, and every placeholder option is disabled; `DashboardApp` clears the model when the provider changes so a Groq name is never submitted to Gemini; `RunPanel` says where the run happens. `apiKeys.ts` is new, and `api.ts` attaches the visitor's keys to every call and, for Ollama, measures in the tab before posting the `recorded` result.
+
 ## Files
 
 | File | What it is |
@@ -42,7 +44,8 @@ they were never things a user could meaningfully change.
 | `InstalledModels.tsx` | 245 lines. The always-visible model panel, with `fitFor` deciding what is offered at each step |
 | `VisionHandoff.tsx` | 88 lines. The route into the vision dashboard |
 | `StateViews.tsx` | 85 lines. `EmptyState`, `ErrorState`, `LoadingState` - what replaced three separate top-level components |
-| `api.ts` | 243 lines. The one typed gateway. Every request goes through it, so components render exactly one error shape. Types come from the benchmark module's DTOs via `import type`, erased at build time, so the dashboard cannot drift from the measurement envelope without a compile error |
+| `apiKeys.ts` | The visitor's own cloud keys, in this browser's localStorage; `apiKeyHeaders()` attaches them to every API call. Components get only "is one set", never the value |
+| `api.ts` | The one typed gateway. For Ollama, `getLocalRuntime` and `runBenchmark`/`runComparison` talk to the visitor's own runtime from the tab (see `infrastructure/browser-ollama.ts`) and send the measurements to the server to be scored - the server cannot reach a visitor's machine once hosted. Every request goes through it, so components render exactly one error shape. Types come from the benchmark module's DTOs via `import type`, erased at build time, so the dashboard cannot drift from the measurement envelope without a compile error |
 | `format.ts` | 86 lines. Display helpers whose job is that **no component ever turns a `null` into a `0`** |
 | `session.ts` | 92 lines. The browser's own durable id in `localStorage`, sent as `x-edgepilot-session`, never displayed. `localStorage` and not `sessionStorage`, because a workload registered in one tab has to still be yours in the next tab, and tomorrow |
 
@@ -65,6 +68,7 @@ These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/local-runtime/`](../../app/api/v1/local-runtime/FOLDER.md)
 - [`src/app/api/v1/providers/`](../../app/api/v1/providers/FOLDER.md)
+- [`src/components/setup/`](../setup/FOLDER.md)
 - `src/app/api/v1/readiness/[id]/` ([FOLDER.md](../../app/api/v1/readiness/%5Bid%5D/FOLDER.md))
 - [`src/app/api/v1/session-log/`](../../app/api/v1/session-log/FOLDER.md)
 - [`src/app/api/v1/workloads/`](../../app/api/v1/workloads/FOLDER.md)

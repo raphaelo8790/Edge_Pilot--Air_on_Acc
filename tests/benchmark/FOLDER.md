@@ -39,7 +39,10 @@ fix went into the runner, not into the assertion.
 | `egress-warning.test.ts` | The pre-flight warning, including that it does **not** carry the prompt text |
 | `comparison.test.ts` | Planning and reporting: overlapping ranges must not produce a winner |
 | `run-comparison.test.ts` | The comparison use case, including sequential execution for local entrants |
+| `visitor-keys.test.ts` | Header parsing for a visitor's own cloud keys: trimmed, shape-checked, laid over the server's per provider |
+| `recorded-provider.test.ts` | A browser-recorded run through the runner: cold start discarded, browser residency readings used, no cloud fallback; and the request schema's recording rules |
 | `ollama-catalog.test.ts` | Runtime status and the installed-model list |
+| `cloud-catalog.test.ts` | Gemini and Groq model lists: filtering, pagination, key-in-header, and each failure message |
 | `ollama-provider.test.ts` | NDJSON streaming, nanosecond conversion, TTFT |
 | `gemini-provider.test.ts` | SSE parsing, `usageMetadata`, header-carried key |
 | `groq-provider.test.ts` | OpenAI-compatible SSE, `stream_options.include_usage`, `completion_time` in seconds |

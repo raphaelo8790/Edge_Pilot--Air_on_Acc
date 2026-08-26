@@ -93,12 +93,13 @@ export function DashboardApp() {
           {" · "}
           <ArcadeNavLinks
             items={[
-              { href: "/", label: "home" },
-              { href: "/compare", label: "compare" },
-              { href: "/evidence", label: "evidence" },
-              { href: "/evaluation", label: "matrix" },
-              { href: "/vision-benchmark", label: "vision" },
-              { href: "/history", label: "history" },
+              { href: "/", label: "Home" },
+              { href: "/compare", label: "Compare" },
+              { href: "/evidence", label: "Evidence" },
+              { href: "/evaluation", label: "Matrix" },
+              { href: "/vision-benchmark", label: "Vision" },
+              { href: "/history", label: "Session history" },
+              { href: "/setup", label: "Setup" },
             ]}
           />
         </div>
@@ -151,7 +152,12 @@ export function DashboardApp() {
               taskType={taskType}
               selectedProvider={provider}
               model={model}
-              onSelect={setProvider}
+              onSelect={(next) => {
+                // A model name belongs to one provider's catalogue; carrying
+                // it across would submit a Groq name to Gemini.
+                if (next !== provider) setModel("");
+                setProvider(next);
+              }}
               onModel={setModel}
               onContinue={() => setStep(3)}
               onBack={() => setStep(1)}

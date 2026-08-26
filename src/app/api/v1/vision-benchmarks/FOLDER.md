@@ -23,6 +23,7 @@ machine.
 | File | What it is |
 |---|---|
 | `route.ts` | 128 lines. `GET` and `POST`, with `dynamic` and `runtime` set |
+| [`dataset/`](dataset/FOLDER.md) | `GET` the built-in dataset described for a browser about to run it (samples, labels, prompt, digest); `dataset/images/<file>` serves one fixture, matched against the manifest's own list |
 
 ## Connected folders
 
@@ -40,5 +41,6 @@ machine.
 These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/`](../FOLDER.md)
+- [`dataset/`](dataset/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

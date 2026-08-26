@@ -8,7 +8,7 @@ import {
   VISION_WORKLOAD_ID,
 } from '../../src/modules/vision-benchmark';
 
-type ProviderName = 'ollama' | 'gemini';
+type ProviderName = 'ollama' | 'gemini' | 'groq';
 
 function readArgument(name: string): string | null {
   const prefix = `--${name}=`;
@@ -22,9 +22,9 @@ function readArgument(name: string): string | null {
 function readProvider(): ProviderName {
   const provider = readArgument('provider');
 
-  if (provider !== 'ollama' && provider !== 'gemini') {
+  if (provider !== 'ollama' && provider !== 'gemini' && provider !== 'groq') {
     throw new Error(
-      "Use '--provider=ollama' or '--provider=gemini'."
+      "Use '--provider=ollama', '--provider=gemini' or '--provider=groq'."
     );
   }
 

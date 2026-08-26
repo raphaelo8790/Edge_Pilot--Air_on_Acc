@@ -270,7 +270,7 @@ export const VisionBenchmarkEvidenceSchema = z
 
 export const VisionBenchmarkRunRequestSchema = z.object({
   workloadId: z.literal(VISION_WORKLOAD_ID),
-  provider: z.enum(['ollama', 'gemini']),
+  provider: z.enum(['ollama', 'gemini', 'groq']),
   model: z.string().min(1).max(200),
   deviceProfileId: z.string().min(1).max(200),
   gitCommitSha: GitCommitSchema,

@@ -16,17 +16,20 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ArcadeNavLinks } from "@/components/ArcadeNav";
 import { addComparisonRun } from "@/components/vision/runHistory";
 import { PaletteToggle } from "@/components/PaletteToggle";
+import { parseParameterSize } from "@/modules/benchmark/application/dtos/LocalRuntime";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import {
   discardSessionLog,
   downloadSessionLog,
   getLocalRuntime,
+  getProviderModels,
   getProviders,
   getSharePreview,
   runComparison,
   shareSessionLog,
   type ApiFailure,
+  type CloudCatalog,
   type ComparisonEntrantInput,
   type ComparisonPlanDto,
   type ComparisonResultDto,
@@ -82,14 +85,21 @@ export function CompareApp() {
 
   const [catalog, setCatalog] = useState<ProviderCatalogEntry[]>([]);
   const [localModels, setLocalModels] = useState<LocalModel[]>([]);
+  // What each cloud key may run, from the vendor's own list. Absent until
+  // answered; a failure is kept so the field can say why it is empty.
+  const [cloudModels, setCloudModels] = useState<CloudModels>({});
   const [entrants, setEntrants] = useState<EntrantForm[]>([
     { provider: "ollama", model: "", tier: "local" },
+    // Becomes a cloud provider once the catalogue says one is configured -
+    // a local-vs-cloud pair is the comparison this app exists to make, and
+    // two Ollama rows by default hid that anything else was possible.
     { provider: "ollama", model: "", tier: "local" },
   ]);
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [iterations, setIterations] = useState(3);
 
   const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [failure, setFailure] = useState<ApiFailure | null>(null);
   const [refusedPlan, setRefusedPlan] = useState<ComparisonPlanDto | null>(null);
@@ -100,13 +110,36 @@ export function CompareApp() {
   useEffect(() => {
     let cancelled = false;
     getProviders().then((res) => {
-      if (!cancelled && res.ok) setCatalog(res.data);
+      if (cancelled || !res.ok) return;
+      setCatalog(res.data);
+
+      // Default the second entrant to the first configured cloud provider,
+      // Gemini before Groq. Only while it is still untouched (no model
+      // chosen), so a choice the visitor already made is never overwritten.
+      const cloud = ["gemini", "groq"]
+        .map((name) => res.data.find((p) => p.name === name))
+        .find((p) => p && p.is_configured);
+      if (cloud) {
+        setEntrants((all) =>
+          all[1] && all[1].provider === "ollama" && all[1].model === ""
+            ? all.map((e, i) =>
+                i === 1 ? { provider: cloud.name, model: "", tier: "unknown" } : e,
+              )
+            : all,
+        );
+      }
     });
     getLocalRuntime().then((res) => {
       if (!cancelled) {
         setLocalModels(res.ok && res.data.ok ? res.data.models : []);
       }
     });
+    for (const name of ["gemini", "groq"] as const) {
+      getProviderModels(name).then((res) => {
+        if (cancelled) return;
+        setCloudModels((current) => ({ ...current, [name]: res.ok ? res.data : res }));
+      });
+    }
     return () => {
       cancelled = true;
     };
@@ -190,12 +223,28 @@ export function CompareApp() {
     setElapsed(0);
     timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
 
-    const payload: ComparisonEntrantInput[] = entrants.map((e) => ({
-      provider: e.provider,
-      model: e.model,
-      tier: e.tier,
-    }));
-    const res = await runComparison({ entrants: payload, prompt, iterations });
+    const payload: ComparisonEntrantInput[] = entrants.map((e) => {
+      // For a local entrant, families and size come from the visitor's own
+      // runtime - the server cannot see it once the app is hosted.
+      const known =
+        e.provider === "ollama"
+          ? localModels.find((m) => m.name === e.model)
+          : undefined;
+      return {
+        provider: e.provider,
+        model: e.model,
+        tier: e.tier,
+        families: known?.families,
+        parametersBillions: known
+          ? parseParameterSize(known.parameter_size)
+          : undefined,
+      };
+    });
+    const res = await runComparison(
+      { entrants: payload, prompt, iterations },
+      setProgress,
+    );
+    setProgress(null);
 
     if (timerRef.current) clearInterval(timerRef.current);
     setRunning(false);
@@ -229,11 +278,12 @@ export function CompareApp() {
           {" · "}
           <ArcadeNavLinks
             items={[
-              { href: "/", label: "home" },
-              { href: "/dashboard", label: "dashboard" },
-              { href: "/evidence", label: "evidence" },
-              { href: "/evaluation", label: "matrix" },
-              { href: "/history", label: "history" },
+              { href: "/", label: "Home" },
+              { href: "/dashboard", label: "Dashboard" },
+              { href: "/evidence", label: "Evidence" },
+              { href: "/evaluation", label: "Matrix" },
+              { href: "/history", label: "Session history" },
+              { href: "/setup", label: "Setup" },
             ]}
           />
         </div>
@@ -307,7 +357,7 @@ export function CompareApp() {
             <div className="state-panel" role="status" aria-live="polite">
               <span className="spinner" aria-hidden="true" />
               <p className="state-title">
-                Comparison running… {fmtElapsed(elapsed)}
+                {progress ?? "Comparison running…"} {fmtElapsed(elapsed)}
               </p>
               <p className="state-detail">
                 {totalCalls} real calls across {entrants.length} entrants.
@@ -322,6 +372,7 @@ export function CompareApp() {
                 entrants={entrants}
                 catalog={catalog}
                 localModels={localModels}
+                cloudModels={cloudModels}
                 onChange={setEntrant}
                 onAdd={() =>
                   setEntrants((all) =>
@@ -417,11 +468,19 @@ export function CompareApp() {
 
 // ---------------------------------------------------------------------------
 
+type CloudName = "gemini" | "groq";
+type CloudModels = Partial<Record<CloudName, CloudCatalog | ApiFailure>>;
+
+function isCloudName(name: string): name is CloudName {
+  return name === "gemini" || name === "groq";
+}
+
 function EntrantEditor({
   idBase,
   entrants,
   catalog,
   localModels,
+  cloudModels,
   onChange,
   onAdd,
   onRemove,
@@ -430,6 +489,7 @@ function EntrantEditor({
   entrants: EntrantForm[];
   catalog: ProviderCatalogEntry[];
   localModels: LocalModel[];
+  cloudModels: CloudModels;
   onChange: (index: number, patch: Partial<EntrantForm>) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
@@ -439,6 +499,9 @@ function EntrantEditor({
       {entrants.map((entrant, i) => {
         const entry = catalog.find((p) => p.name === entrant.provider) ?? null;
         const isLocal = entry ? entry.type === "local" : entrant.provider === "ollama";
+        const cloud = isCloudName(entrant.provider) ? cloudModels[entrant.provider] : undefined;
+        const cloudCatalog = cloud && "provider" in cloud ? cloud : null;
+        const cloudFailure = cloud && !("provider" in cloud) ? cloud : null;
         return (
           <div
             key={i}
@@ -487,13 +550,18 @@ function EntrantEditor({
             </div>
             <div className="field">
               <label htmlFor={`${idBase}-m${i}`}>Model</label>
-              {isLocal && localModels.length > 0 ? (
+              {isLocal ? (
                 <select
                   id={`${idBase}-m${i}`}
                   value={entrant.model}
+                  disabled={localModels.length === 0}
                   onChange={(e) => onChange(i, { model: e.target.value })}
                 >
-                  <option value="">Choose an installed model…</option>
+                  <option value="" disabled>
+                    {localModels.length === 0
+                      ? "No installed model found…"
+                      : "Choose an installed model…"}
+                  </option>
                   {localModels.map((m) => (
                     <option key={m.name} value={m.name}>
                       {m.name}
@@ -501,6 +569,40 @@ function EntrantEditor({
                     </option>
                   ))}
                 </select>
+              ) : isCloudName(entrant.provider) ? (
+                <>
+                  <select
+                    id={`${idBase}-m${i}`}
+                    value={entrant.model}
+                    disabled={!cloudCatalog?.ok}
+                    onChange={(e) => onChange(i, { model: e.target.value })}
+                  >
+                    <option value="" disabled>
+                      {cloudCatalog === null && cloudFailure === null
+                        ? "Asking the provider…"
+                        : "Choose a model…"}
+                    </option>
+                    {(cloudCatalog?.models ?? []).map((m) => (
+                      <option key={m.name} value={m.name}>
+                        {m.name}
+                        {m.context_window
+                          ? ` · ${Math.round(m.context_window / 1000)}k ctx`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {cloudCatalog && !cloudCatalog.ok ? (
+                    <p className="error-text">
+                      {cloudCatalog.message}
+                      {cloudCatalog.remedy ? ` ${cloudCatalog.remedy}` : ""}
+                    </p>
+                  ) : null}
+                  {cloudFailure ? (
+                    <p className="error-text">
+                      Could not ask for the model list: {cloudFailure.error}
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <input
                   id={`${idBase}-m${i}`}

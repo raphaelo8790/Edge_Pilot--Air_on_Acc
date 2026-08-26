@@ -15,6 +15,11 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import '../dashboard/dashboard.css';
 
 export const dynamic = 'force-dynamic';
+// The built-in cloud run is a server action on this route: 21 provider
+// calls, batched seven at a time. Vercel's default function limit is 10 s
+// on Hobby, which that does not fit; this raises it to what the plan allows
+// (60 s on Hobby, more on Pro). The benchmarks API route sets its own.
+export const maxDuration = 60;
 
 function percent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
@@ -58,12 +63,13 @@ export default async function VisionBenchmarkPage() {
             <div className="ep-rise ep-rise-2 mt-4 text-sm text-mist-400">
               <ArcadeNavLinks
                 items={[
-                  { href: '/', label: 'home' },
-                  { href: '/dashboard', label: 'dashboard' },
-                  { href: '/compare', label: 'compare' },
-                  { href: '/evidence', label: 'evidence' },
-                  { href: '/evaluation', label: 'matrix' },
-                  { href: '/history', label: 'history' },
+                  { href: '/', label: 'Home' },
+                  { href: '/dashboard', label: 'Dashboard' },
+                  { href: '/compare', label: 'Compare' },
+                  { href: '/evidence', label: 'Evidence' },
+                  { href: '/evaluation', label: 'Matrix' },
+                  { href: '/history', label: 'Session history' },
+                  { href: '/setup', label: 'Setup' },
                 ]}
               />
             </div>

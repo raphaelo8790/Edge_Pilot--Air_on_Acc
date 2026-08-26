@@ -21,6 +21,8 @@ return: a real hardware fit instead of the constant 50, a discarded cold-start
 iteration reported separately, and a readiness score with privacy taken out of
 the average.
 
+**Hosted-mode pass.** `POST` accepts an optional `recorded` field: a run the visitor's browser already measured against its own Ollama (`iterations + 1` responses, the first a cold start, plus residency readings before and after). With it, the route scores through `RecordedProvider` instead of calling a provider; without it, nothing changed. Two optional headers carry a visitor's own Gemini and Groq keys for that request only. The activity log records `measured_by: browser | server` and the local host, never a key.
+
 ## Files
 
 | File | What it is |

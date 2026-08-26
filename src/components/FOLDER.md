@@ -26,6 +26,7 @@ reach the server.
 | [`vision/`](vision/FOLDER.md) | Both vision run panels, the browser run store, and the threshold note |
 | [`compare/`](compare/FOLDER.md) | The comparison application - the UI the comparison engine never had |
 | [`history/`](history/FOLDER.md) | Every run this session produced, and what may leave the machine |
+| [`setup/`](setup/FOLDER.md) | `SetupGuide` - the /setup page: OLLAMA_ORIGINS instructions per OS with the site's real origin filled in, a "check the connection" probe, and the visitor's own cloud keys with a save-and-test |
 
 ## Connected folders
 

@@ -30,6 +30,8 @@ errors, the measured run should still proceed.
 The executor also threads `labels`, `datasetId` and `workloadId` through, which
 is what lets a run be about a dataset other than the built-in one.
 
+**Hosted-mode pass.** `executeVisionBenchmark` gained a `concurrency` option, default 1. Batches of that size are awaited in turn and each response is written to its sample's own slot, so a batch of one is the old sequential loop byte for byte. Cloud runs from the page use 7 to fit a serverless time limit; a local run stays at 1, because two requests to one GPU measure contention rather than the model.
+
 ## Files
 
 | File | What it is |

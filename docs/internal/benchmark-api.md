@@ -306,6 +306,32 @@ documented code. On a `MeasuredIteration` the code is also surfaced properly as
 
 ---
 
+## Added for hosted mode
+
+`POST /api/v1/benchmarks` and `POST /api/v1/comparisons` accept an optional
+`recorded` field (on the request, and per entrant respectively) for a run the
+browser already measured against the visitor's own Ollama: `host`,
+`responses` (`iterations + 1` measured responses, the first a discarded cold
+start, each with usage and provenance), and `resident_before` /
+`resident_after` residency readings. Accepted only with `provider: "ollama"`;
+the server scores it through the same runner and never re-measures. Schema:
+`RecordedMeasurementSchema` in `application/dtos/BenchmarkRequest.ts`.
+
+Two optional request headers, `x-edgepilot-gemini-key` and
+`x-edgepilot-groq-key`, carry a visitor's own cloud keys. They apply to that
+request only and are never stored, logged or echoed.
+
+`GET /api/v1/providers/models?provider=gemini|groq` lists the models the key
+(visitor's, else server's) may run: `name`, `display_name`, `context_window`,
+`supports_vision`, plus `ok`, `message`, `remedy` and `omitted_count`.
+
+`GET /api/v1/vision-benchmarks/dataset` and `dataset/images/<file>` describe and
+serve the built-in vision dataset for a browser-side run.
+
+`GET /api/v1/local-runtime` still exists for the CLI and for a server that sits
+beside an Ollama, but describes the **server's** machine; the pages ask the
+visitor's browser instead.
+
 ## Not in this contract
 
 No authentication. Every route is currently open; ownership is derived from

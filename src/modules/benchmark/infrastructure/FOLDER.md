@@ -26,7 +26,10 @@ more to wire.
 |---|---|
 | `container.ts` | 78 lines. The composition root. Routes ask for a fully wired use case and get one; they never construct an adapter, read an environment variable, or touch Prisma. Every wiring decision is in this one readable place |
 | `config.ts` | 184 lines. Reads and validates the environment once, with documented defaults, so a misconfiguration surfaces as a **named variable** rather than a stack trace three layers down. Also refuses to evaluate in a browser bundle - every value here is a secret or a host that must stay server-side. The guard is a runtime check because `server-only` is not a dependency, and it is still worth having: it turns an accidental client import into an immediate, explicit failure at the point of the mistake |
+| `CloudCatalog.ts` | The same question for Gemini and Groq: which models may the configured key run, asked over each vendor's list-models endpoint with the key in a header. Narrowed to text generators; audio, embedding and safety models are counted, not shown. Replaces the free-text model box and its hardcoded suggestion list |
 | `OllamaCatalog.ts` | 223 lines. Runtime status and the installed-model list. Exists because `isConfigured()` only reports whether a host string is set - whether anything is listening is a runtime question, and the user was learning the answer from a failed benchmark |
+| `visitor-keys.ts` | A visitor's own Gemini/Groq keys, read from two request headers, laid over the server's config for that one request. A registry built with them is never cached. Never logged, stored or echoed |
+| `browser-ollama.ts` | The visitor's OWN Ollama, reached from their browser tab. Hosted, the server's "localhost" is a datacentre container with no Ollama; only the page in the visitor's browser can reach theirs. Reuses `OllamaCatalog`, `OllamaProvider` and `OllamaResidencyProbe` unchanged (they are plain `fetch`), adds the CORS remedy (`OLLAMA_ORIGINS`) a hosted page needs, and packages a run as the `recorded` field the benchmark and comparison routes accept. Never reads `process.env` |
 | `OllamaResidencyProbe.ts` | 107 lines. `GET /api/tags` for size on disk, `GET /api/ps` for `size` (total resident, including the KV cache for the context window) and `size_vram` (how many of those bytes are on the GPU). `size_vram / size` is the fit signal, and it is reported by the runtime rather than inferred by us |
 
 ## Subfolders
@@ -54,6 +57,8 @@ These folders point here. Each link below resolves in both directions.
 
 - [`prisma/`](../../../../prisma/FOLDER.md)
 - [`src/app/api/v1/benchmarks/`](../../../app/api/v1/benchmarks/FOLDER.md)
+- [`src/app/api/v1/providers/models/`](../../../app/api/v1/providers/models/FOLDER.md)
+- [`src/app/setup/`](../../../app/setup/FOLDER.md)
 - [`src/modules/benchmark/`](../FOLDER.md)
 - [`src/modules/benchmark/application/`](../application/FOLDER.md)
 - [`src/modules/benchmark/application/services/`](../application/services/FOLDER.md)

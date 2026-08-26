@@ -625,12 +625,96 @@ there is no public URL, and `docs/internal/database.md` is still stale.
 
 ---
 
+## 6b. Hosted mode
+
+A fourth pass, made for one reason: the site is going to live on Vercel with a
+Neon database, and most of the Ollama plumbing had been written for a machine
+where the page and the runtime were the same computer. Section 6a's "no public
+URL" was about to close, and closing it would have broken every local run for
+every visitor.
+
+**The problem, stated plainly.** Every Ollama call except the upload-your-own-
+dataset path ran on the server and read `OLLAMA_HOST`, which defaults to
+`localhost`. On a laptop that is the same Ollama the browser sees. Hosted,
+"localhost" is a container in a datacentre with nothing listening, and a server
+cannot reach a visitor's laptop. The dashboard, the comparison and the built-in
+vision run would all have reported "not reachable" for everyone.
+
+**Ollama moved into the browser.** `infrastructure/browser-ollama.ts` reuses
+`OllamaCatalog`, `OllamaProvider` and `OllamaResidencyProbe` unchanged - they
+were plain `fetch` with no server dependency - and runs them from the tab
+against the visitor's own machine. The tab does only what it alone can do (the
+HTTP calls) and sends the raw measurements to the server in a `recorded` field
+on the same benchmark and comparison requests. There a `RecordedProvider`
+replays them through the unchanged `BenchmarkRunner`: same cold-start
+isolation, same summary, same hardware fit from the residency readings the
+browser took, same readiness score, same database row, same activity log. A
+run measured in the browser and one measured on the server are the same kind
+of evidence, which is what keeps them comparable. No fallback for a recorded
+run: a cloud model is not a substitute measurement of the visitor's machine.
+The built-in vision run followed the same path - two new routes serve the
+dataset description and its 21 images, and the shared executor runs in the
+browser against the visitor's Ollama.
+
+**What cannot be made invisible.** Ollama refuses any website it was not told
+to trust, which is the right default and not ours to override. A visitor
+allows the site's origin once (`OLLAMA_ORIGINS`), per operating system. `/setup`
+gives that the room it needs - OS tabs, the exact command with the real origin
+filled in, a copy button, a connection check - and every place a visitor can
+hit the refusal (the installed-models panel, the vision page, the home page)
+points there in one line.
+
+**Cloud providers gained real model lists.** The provider step used to claim a
+cloud vendor "does not publish its catalogue" and offered free text with a
+hardcoded suggestion list that had already drifted from `.env.example`. Both
+vendors publish it under the same key; `CloudCatalog` asks, narrows to text
+generators, and marks which accept an image. The dashboard, the comparison and
+the vision page all pick from real names now, and the placeholder option can no
+longer be submitted.
+
+**Visitors can bring their own keys.** Stored in their browser, sent as two
+request headers, laid over the server's configuration for that one request
+through a registry that is never cached, never logged, never stored, never
+echoed. A visitor without keys still uses the site's, and those runs are capped
+per visitor per hour (`core/quota`) so the shared quota cannot be drained by
+one person clicking all evening.
+
+**Vision on Gemini and Groq.** A Groq vision adapter (OpenAI chat dialect, image
+as a data URL) joined the Gemini one; the server action takes the provider, the
+model and the visitor's keys as arguments, because a server action carries no
+request headers; cloud runs classify seven images at a time so 21 fit a
+serverless time limit, while a local run stays strictly sequential - two
+requests to one GPU measure contention, not the model. Committed reference
+rows stay as they were: controlled Gemini, controlled Ollama, live llava.
+
+**Removed.** `/api/v1/health/database` and the panel on `/history` that called
+it. Hosted, an unauthenticated endpoint announcing row counts and migration
+names to whoever asks is not a diagnostic, and the panel was a debugging aid on
+a user-facing page. Both are kept outside the repository for local use.
+
+**Smaller things that would have broken the deployment.** The evidence commit
+hash falls back to `VERCEL_GIT_COMMIT_SHA` (no `.git` on Vercel);
+`next.config.mjs` traces `datasets/` into the build (a `readFile` path is not an
+import, and without this every hosted built-in run fails with ENOENT); the
+vision page sets `maxDuration`; `.env.example` ends with the list a deployment
+needs, including `BENCHMARK_FALLBACK_ORDER=groq,gemini` so a failed cloud run
+does not fall back to an Ollama that is not there.
+
+Section 6 after this pass: the cloud provider path now executes from the page
+(model lists confirmed against live keys; a Groq vision run awaits a key with
+access to an image-capable model); the privacy catalogue is still `unverified`;
+`official_source` and `quality_score` remain; `docs/internal/database.md` is
+still stale. The public URL is the next step, and the code is now written for
+it.
+
+---
+
 ## 7. Verification state at the time of writing
 
 | Check | Command | Result |
 |---|---|---|
 | Lint | `npm run lint` | 0 problems |
-| Tests | `npm test` | 322 passed, 29 suites |
+| Tests | `npm test` | 348 passed, 33 suites (after 6b) |
 | Build | `npm run build` | clean, 14 routes |
 | Container | `docker build -t edgepilot-ai:test .` | succeeded, 154.8 s |
 | Evaluation matrix | `npm run eval:matrix` | 10/10 cases behaved as documented |
@@ -653,7 +737,7 @@ can be followed either way.
 Start at `src/modules/benchmark/FOLDER.md` for the measurement core, or
 `src/app/FOLDER.md` for the request path.
 
-Seventy-five folder documents, 478 cross-folder links, every one of them
+Eighty-eight folder documents, with cross-folder links, every one of them
 resolving in both directions - if folder A points at folder B, B carries a
 "Referenced from" entry pointing back at A.
 

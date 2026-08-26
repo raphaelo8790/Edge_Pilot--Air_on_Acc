@@ -441,6 +441,17 @@
   align-items: center;
 }
 
+/* A row that mixes a labelled field with buttons: the label lifts the
+   control, so the buttons align to the row's bottom edge - level with the
+   control - rather than to its middle. The field's own bottom margin is
+   removed so "bottom" means the control's bottom. */
+.epd .btn-row-baseline {
+  align-items: flex-end;
+}
+.epd .btn-row-baseline .field {
+  margin-bottom: 0;
+}
+
 /* badges */
 .epd .badge {
   display: inline-flex;
@@ -998,4 +1009,72 @@
   max-height: 220px;
   overflow-y: auto;
   margin: 0 0 12px;
+}
+
+/* ---- /setup ------------------------------------------------------------ */
+
+.epd .setup-steps {
+  margin: 12px 0 10px 18px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.epd .setup-steps li + li {
+  margin-top: 6px;
+}
+
+.epd .setup-command {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.epd .setup-command pre {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+/* Two key fields, each with a verdict line that may or may not be there:
+   a fixed gap between them, so the second never sits on the first's input. */
+.epd .setup-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.epd .setup-keys .field {
+  margin-bottom: 0;
+}
+
+.epd .setup-key-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.epd .setup-key-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.epd .card > .hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.epd .card > .hint code {
+  font-size: 11px;
 }

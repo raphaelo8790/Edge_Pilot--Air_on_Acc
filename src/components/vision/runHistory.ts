@@ -206,6 +206,13 @@ export function addRun(evidence: VisionBenchmarkEvidence): StoredVisionRun[] {
 export interface StoredBenchmarkRun {
   storedAt: number;
   run: BenchmarkRun;
+  /**
+   * Where the model was actually called from. 'browser' for an Ollama run
+   * this tab made against the visitor's own machine; 'server' for a cloud
+   * run. Absent on rows stored before the field existed, which were all
+   * server runs.
+   */
+  measuredIn?: 'browser' | 'server';
 }
 
 const benchmarkStore = createStore<StoredBenchmarkRun>(
@@ -217,8 +224,11 @@ export const readBenchmarkRuns = benchmarkStore.read;
 export const clearBenchmarkRuns = benchmarkStore.clear;
 export const useStoredBenchmarkRuns = benchmarkStore.use;
 
-export function addBenchmarkRun(run: BenchmarkRun): StoredBenchmarkRun[] {
-  return benchmarkStore.add({ storedAt: Date.now(), run });
+export function addBenchmarkRun(
+  run: BenchmarkRun,
+  measuredIn: 'browser' | 'server' = run.effective_provider === 'ollama' ? 'browser' : 'server'
+): StoredBenchmarkRun[] {
+  return benchmarkStore.add({ storedAt: Date.now(), run, measuredIn });
 }
 
 // ---------------------------------------------------------------------------

@@ -7,6 +7,12 @@
 `GET /api/v1/providers` - which providers exist, and whether each is usable on
 this server right now.
 
+`GET /api/v1/providers/models?provider=gemini|groq` (in `models/`) - which
+models the server's key for that vendor may run. The dashboard's model field
+for a cloud provider is a list drawn from this, the way the Ollama field is
+drawn from `local-runtime`. The query is validated with Zod; the key is read
+from server configuration and never appears in the response.
+
 ## What happened here
 
 The behaviour worth knowing is what it does when the database is **not**
@@ -38,5 +44,6 @@ These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/`](../FOLDER.md)
 - [`src/modules/benchmark/`](../../../../modules/benchmark/FOLDER.md)
+- [`models/`](models/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

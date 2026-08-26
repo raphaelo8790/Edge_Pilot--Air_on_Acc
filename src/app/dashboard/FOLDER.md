@@ -21,6 +21,8 @@ The stylesheet is entirely scoped under `.epd`. That scoping is why
 `src/app/globals.css` could shrink from 418 lines to 27: the dashboard's design
 system stopped leaking into the home page and the vision dashboard.
 
+**Hosted-mode pass.** `dashboard.css` gained the `/setup` page's styles (steps, command block, key rows) and `btn-row-baseline`, a row that aligns buttons with a labelled control's bottom edge.
+
 ## Files
 
 | File | What it is |

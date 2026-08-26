@@ -12,8 +12,10 @@ import { useEffect, useId, useState } from "react";
 import type { TaskType } from "@/modules/benchmark/core/services/TaskCompatibility";
 import {
   getLocalRuntime,
+  getProviderModels,
   getProviders,
   type ApiFailure,
+  type CloudCatalog,
   type LocalModel,
   type ProviderCatalogEntry,
   type ProvidersMeta,
@@ -22,12 +24,12 @@ import { fitFor } from "./InstalledModels";
 import { ProviderLogo } from "./ProviderLogo";
 import { ErrorState, LoadingState, EmptyState } from "./StateViews";
 
-/** Suggested model names per provider (from the providers' official docs). */
-const MODEL_SUGGESTIONS: Record<string, string[]> = {
-  ollama: ["llama3.2:1b", "llama3.2:3b", "llama3.1:8b"],
-  gemini: ["gemini-2.5-flash", "gemini-2.5-pro"],
-  groq: ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"],
-};
+/** The providers whose catalogue is asked for over the API with the server's key. */
+type CloudName = "gemini" | "groq";
+
+function isCloudName(name: string | null): name is CloudName {
+  return name === "gemini" || name === "groq";
+}
 
 interface Props {
   /** Decides which installed models can run this workload. */
@@ -57,11 +59,15 @@ export function ProviderPanel({
 
   const [reloadKey, setReloadKey] = useState(0);
 
-  // What is actually installed locally. Ollama is the only provider whose
-  // catalogue can be enumerated - a cloud vendor will not list its models over
-  // an API key - so this narrows the choice for Ollama and leaves the others
-  // as free text.
+  // What is actually installed locally. Narrows the choice for Ollama.
   const [localModels, setLocalModels] = useState<LocalModel[] | null>(null);
+
+  // What the configured key may run, per cloud provider. Both vendors list
+  // their models over the same key used for generation, so the choice is a
+  // list of real names here too. Null = not asked yet or still loading.
+  const [cloudModels, setCloudModels] = useState<
+    Partial<Record<CloudName, CloudCatalog | ApiFailure>>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +81,23 @@ export function ProviderPanel({
       cancelled = true;
     };
   }, []);
+
+  // Asked once per cloud provider, the first time it is selected.
+  useEffect(() => {
+    if (!isCloudName(selectedProvider) || cloudModels[selectedProvider]) return;
+
+    const name = selectedProvider;
+    let cancelled = false;
+
+    getProviderModels(name).then((res) => {
+      if (cancelled) return;
+      setCloudModels((current) => ({ ...current, [name]: res.ok ? res.data : res }));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProvider, cloudModels]);
 
   // State updates happen only after the response arrives (never synchronously
   // inside the effect body — react-hooks/set-state-in-effect), and a cancelled
@@ -107,15 +130,19 @@ export function ProviderPanel({
   const selected = providers?.find((p) => p.name === selectedProvider) ?? null;
   const ready = selected !== null && model.trim().length > 0;
 
-  // Only Ollama's catalogue is knowable from here, and only once it has
-  // answered. Until then this falls back to free text rather than showing an
-  // empty list that looks like "you have no models".
+  // Ollama's list, once it has answered. While it is still being asked the
+  // field says so rather than showing an empty list that looks like "you have
+  // no models".
   const isLocalChoice =
     selectedProvider === "ollama" && localModels !== null && localModels.length > 0;
   const usableLocal = (localModels ?? []).filter(
     (m) => fitFor(m, taskType).usable
   );
   const hiddenCount = (localModels ?? []).length - usableLocal.length;
+
+  const cloud = isCloudName(selectedProvider) ? cloudModels[selectedProvider] : undefined;
+  const cloudCatalog = cloud && "provider" in cloud ? cloud : null;
+  const cloudFailure = cloud && !("provider" in cloud) ? cloud : null;
 
   return (
     <section className="card" aria-labelledby={`${id}-t`}>
@@ -168,14 +195,9 @@ export function ProviderPanel({
                   checked={selectedProvider === p.name}
                   disabled={!p.is_configured}
                   onChange={() => {
+                    // Nothing is pre-filled: every provider's list comes from
+                    // the provider itself, and the user picks from it.
                     onSelect(p.name);
-                    // Do not pre-fill Ollama from the static list: those names
-                    // are examples from the docs, not what is installed here,
-                    // and pre-filling one the machine does not have puts a
-                    // guaranteed `invalid_model` in the box.
-                    if (!model.trim() && p.name !== "ollama") {
-                      onModel(MODEL_SUGGESTIONS[p.name]?.[0] ?? "");
-                    }
                   }}
                 />
                 <span className="rc-title">
@@ -238,7 +260,9 @@ export function ProviderPanel({
                   value={model}
                   onChange={(e) => onModel(e.target.value)}
                 >
-                  <option value="">Choose a model…</option>
+                  <option value="" disabled>
+                    Choose a model…
+                  </option>
                   {usableLocal.map((m) => (
                     <option key={m.name} value={m.name}>
                       {m.name}
@@ -253,29 +277,74 @@ export function ProviderPanel({
                   </p>
                 ) : null}
               </>
+            ) : isCloudName(selectedProvider) ? (
+              <>
+                {cloudCatalog === null && cloudFailure === null ? (
+                  <p className="hint">Asking {selected?.display_name ?? selectedProvider} which models this key may run…</p>
+                ) : cloudCatalog?.ok ? (
+                  <p className="hint">
+                    {cloudCatalog.message}
+                    {cloudCatalog.omitted_count > 0
+                      ? ` ${cloudCatalog.omitted_count} other${cloudCatalog.omitted_count > 1 ? "s" : ""} (audio, embedding or safety models) left out.`
+                      : ""}
+                  </p>
+                ) : null}
+                <select
+                  id={`${id}-model`}
+                  value={model}
+                  disabled={!cloudCatalog?.ok}
+                  onChange={(e) => onModel(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Choose a model…
+                  </option>
+                  {(cloudCatalog?.models ?? []).map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                      {m.context_window
+                        ? ` · ${Math.round(m.context_window / 1000)}k ctx`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+                {cloudCatalog && !cloudCatalog.ok ? (
+                  <p className="error-text">
+                    {cloudCatalog.message}
+                    {cloudCatalog.remedy ? ` ${cloudCatalog.remedy}` : ""}
+                  </p>
+                ) : null}
+                {cloudFailure ? (
+                  <p className="error-text">
+                    Could not ask for the model list: {cloudFailure.error}
+                  </p>
+                ) : null}
+              </>
+            ) : selectedProvider === "ollama" ? (
+              <>
+                <p className="hint">
+                  {localModels === null
+                    ? "Asking the local runtime what is installed…"
+                    : "The local runtime did not answer, or has no models. See the panel below."}
+                </p>
+                <select id={`${id}-model`} value="" disabled>
+                  <option value="" disabled>
+                    Choose a model…
+                  </option>
+                </select>
+              </>
+            ) : selectedProvider === null ? (
+              <p className="hint">Choose a provider above to see its models.</p>
             ) : (
               <>
                 <p className="hint">
                   Exact model name as the provider knows it (an unknown name
-                  fails the run with <code>invalid_model</code>). A cloud
-                  provider does not publish its catalogue over the API, so this
-                  cannot be narrowed the way the local list is.
+                  fails the run with <code>invalid_model</code>).
                 </p>
                 <input
                   id={`${id}-model`}
-                  list={`${id}-models`}
                   value={model}
                   onChange={(e) => onModel(e.target.value)}
-                  placeholder="e.g. gemini-2.5-flash"
                 />
-                <datalist id={`${id}-models`}>
-                  {(selectedProvider
-                    ? MODEL_SUGGESTIONS[selectedProvider] ?? []
-                    : []
-                  ).map((m) => (
-                    <option key={m} value={m} />
-                  ))}
-                </datalist>
               </>
             )}
           </div>

@@ -208,10 +208,11 @@ export default async function EvidencePage() {
           {' · '}
           <ArcadeNavLinks
             items={[
-              { href: '/', label: 'home' },
-              { href: '/dashboard', label: 'dashboard' },
-              { href: '/compare', label: 'compare' },
-              { href: '/history', label: 'history' },
+              { href: '/', label: 'Home' },
+              { href: '/dashboard', label: 'Dashboard' },
+              { href: '/compare', label: 'Compare' },
+              { href: '/history', label: 'Session history' },
+              { href: '/setup', label: 'Setup' },
             ]}
           />
         </div>

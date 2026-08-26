@@ -22,6 +22,9 @@
 
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { RecordedMeasurementSchema } from '@/modules/benchmark/application/dtos/BenchmarkRequest';
+import { visitorKeysFrom } from '@/modules/benchmark/infrastructure/visitor-keys';
+import { parseParameterSize } from '@/modules/benchmark/application/dtos/LocalRuntime';
 import { randomUUID } from 'node:crypto';
 import {
   localModelCatalogue,
@@ -71,39 +74,41 @@ const EntrantSchema = z.object({
   tier: z.enum(['local', 'free', 'paid', 'unknown']).optional(),
   families: z.array(z.string()).optional(),
   parametersBillions: z.number().positive().nullable().optional(),
+  // Measured by the visitor's browser against its own Ollama. See
+  // RecordedProvider for why the server scores rather than re-measures.
+  recorded: RecordedMeasurementSchema.optional(),
 });
 
-const ComparisonSchema = z.object({
-  entrants: z.array(EntrantSchema).min(2).max(4),
-  prompt: z.string().min(1).max(4000),
-  iterations: z.number().int().min(1).max(20),
-});
+const ComparisonSchema = z
+  .object({
+    entrants: z.array(EntrantSchema).min(2).max(4),
+    prompt: z.string().min(1).max(4000),
+    iterations: z.number().int().min(1).max(20),
+  })
+  .superRefine((value, context) => {
+    value.entrants.forEach((entrant, index) => {
+      if (!entrant.recorded) return;
+
+      if (entrant.provider !== 'ollama') {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['entrants', index, 'recorded'],
+          message: 'Only an ollama entrant can be recorded by the browser.',
+        });
+      }
+
+      if (entrant.recorded.responses.length !== value.iterations + 1) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['entrants', index, 'recorded', 'responses'],
+          message:
+            'recorded.responses must hold iterations + 1 entries (the first is the cold start).',
+        });
+      }
+    });
+  });
 
 
-/**
- * Turns a runtime-reported parameter size into billions. Ollama reports
- * strings like "7.2B" or "566.70M". Anything unrecognised returns null, so the
- * normalised work-rate row is omitted rather than computed from a guess.
- */
-function parseParameterSize(raw: string | null): number | null {
-  if (!raw) {
-    return null;
-  }
-
-  const match = /^([0-9]+(?:\.[0-9]+)?)\s*([BM])$/i.exec(raw.trim());
-
-  if (!match) {
-    return null;
-  }
-
-  const value = Number(match[1]);
-
-  if (!Number.isFinite(value)) {
-    return null;
-  }
-
-  return match[2].toUpperCase() === 'B' ? value : value / 1000;
-}
 
 export async function POST(request: Request) {
   // Null unless the caller sent a session header. No header, no record.
@@ -181,7 +186,7 @@ export async function POST(request: Request) {
       };
     });
 
-    const result = await runComparisonUseCase().execute({
+    const result = await runComparisonUseCase(visitorKeysFrom(request)).execute({
       entrants,
       prompt: parsed.prompt,
       iterations: parsed.iterations,

@@ -22,7 +22,17 @@ import type { BenchmarkRunOutcome } from "@/modules/benchmark/application/servic
 import type { ComparisonReport } from "@/modules/benchmark/core/services/ComparisonReport";
 import type { Modality, ModalityConfidence } from "@/modules/benchmark/core/services/ModelModality";
 import type { ProviderTier } from "@/modules/benchmark/core/services/PrivacyAssessor";
+import type {
+  LocalModelDto,
+  LocalRuntimeDto,
+} from "@/modules/benchmark/application/dtos/LocalRuntime";
+import type { RecordedMeasurement } from "@/modules/benchmark/application/dtos/BenchmarkRequest";
+import {
+  measureInBrowser,
+  probeBrowserOllama,
+} from "@/modules/benchmark/infrastructure/browser-ollama";
 import { getSessionId } from "./session";
+import { apiKeyHeaders } from "./apiKeys";
 
 /**
  * Must match SESSION_HEADER in src/core/logging/sessionLogStore.ts. It is
@@ -77,38 +87,13 @@ export interface ReadinessRecord {
 }
 
 /** One model installed on the machine running Ollama. */
-export interface LocalModel {
-  name: string;
-  size_bytes: number | null;
-  parameter_size: string | null;
-  quantization: string | null;
-  families: string[];
-  modality: "text" | "vision" | "embedding";
-  modality_confidence: "reported" | "inferred";
-  modality_reason: string;
-  /**
-   * Loaded in memory right now. False means installed but asleep — the next
-   * call pays a cold start. Null when the runtime could not be asked.
-   */
-  resident: boolean | null;
-}
-
-export interface LocalRuntime {
-  provider: string;
-  state:
-    | "ready"
-    | "reachable-no-models"
-    | "unreachable"
-    | "bad-host"
-    | "not-configured";
-  ok: boolean;
-  host: string | null;
-  version: string | null;
-  message: string;
-  remedy: string | null;
-  model_count: number;
-  models: LocalModel[];
-}
+/**
+ * The visitor's own Ollama, as their browser sees it. The shapes are the
+ * module's DTOs, shared with GET /api/v1/local-runtime so the two answers
+ * are interchangeable.
+ */
+export type LocalModel = LocalModelDto;
+export type LocalRuntime = LocalRuntimeDto;
 
 export interface CreateWorkloadInput {
   task_type:
@@ -162,6 +147,9 @@ async function call<T>(
         // sandbox user, and it is why no component ever handles a uuid.
         // Omitted during server rendering, where there is no identity.
         ...(sessionId === null ? {} : { [SESSION_HEADER]: sessionId }),
+        // The visitor's own cloud keys, if they set any on /setup. Used by
+        // the server for this request only; see visitor-keys.ts.
+        ...apiKeyHeaders(),
         ...init?.headers,
       },
       cache: "no-store",
@@ -218,8 +206,48 @@ async function call<T>(
 // Endpoints
 // ---------------------------------------------------------------------------
 
-export function getLocalRuntime() {
-  return call<LocalRuntime>("/local-runtime");
+/**
+ * Asks the visitor's OWN Ollama, from this tab — not the server's.
+ *
+ * This used to call GET /api/v1/local-runtime, which answers about the
+ * machine the server runs on. Hosted, that machine has no Ollama and never
+ * will; the visitor's does. Same return shape, so callers did not change.
+ */
+export async function getLocalRuntime(): Promise<ApiOutcome<LocalRuntime>> {
+  try {
+    const data = await probeBrowserOllama();
+    return { ok: true, status: 200, data };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      error: error instanceof Error ? error.message : "Could not ask the local runtime",
+    };
+  }
+}
+
+export interface CloudModel {
+  name: string;
+  display_name: string;
+  context_window: number | null;
+  /** Accepts an image alongside text. The vision page offers only these. */
+  supports_vision: boolean;
+}
+
+export interface CloudCatalog {
+  provider: "gemini" | "groq";
+  ok: boolean;
+  message: string;
+  remedy: string | null;
+  model_count: number;
+  /** Models the vendor listed that cannot run a text benchmark. */
+  omitted_count: number;
+  models: CloudModel[];
+}
+
+/** The models a cloud provider's configured key may run. */
+export function getProviderModels(provider: "gemini" | "groq") {
+  return call<CloudCatalog>(`/providers/models?provider=${provider}`);
 }
 
 export function getProviders() {
@@ -234,10 +262,38 @@ export function createWorkload(input: CreateWorkloadInput) {
 }
 
 /** The long call — a run is iterations × real inference. */
-export function runBenchmark(input: BenchmarkRequest) {
+/**
+ * Runs a benchmark.
+ *
+ * For Ollama the measurement happens HERE, in the tab, against the visitor's
+ * own runtime; the server then scores, stores and logs it. For a cloud
+ * provider the server measures, because the key lives there. Either way the
+ * result is one `BenchmarkRun`, and a reader of the history cannot tell the
+ * two apart except by the `measured in the browser` provider label.
+ */
+export async function runBenchmark(input: BenchmarkRequest) {
+  let recorded: RecordedMeasurement | undefined;
+
+  if (input.provider === "ollama") {
+    try {
+      recorded = await measureInBrowser({
+        model: input.model,
+        prompt: input.prompt,
+        iterations: input.iterations,
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        error: "The local run could not be started",
+        details: error instanceof Error ? error.message : String(error),
+      } as ApiFailure;
+    }
+  }
+
   return call<BenchmarkRun>("/benchmarks", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify(recorded ? { ...input, recorded } : input),
   });
 }
 
@@ -267,6 +323,9 @@ export interface ComparisonEntrantInput {
   model: string;
   /** Declared, never detected — free tiers commonly train on input. */
   tier?: ProviderTier;
+  /** From the visitor's own runtime, for an Ollama entrant. */
+  families?: string[];
+  parametersBillions?: number | null;
 }
 
 export interface ComparisonPlanEntrantDto {
@@ -301,14 +360,52 @@ export interface ComparisonResultDto {
 }
 
 /** The longest call in the app: up to 4 entrants × (iterations + 1) real runs. */
-export function runComparison(input: {
-  entrants: ComparisonEntrantInput[];
-  prompt: string;
-  iterations: number;
-}) {
+/**
+ * Runs a comparison. Ollama entrants are measured HERE, in the tab, one after
+ * another (they share the visitor's GPU); cloud entrants are measured by the
+ * server. `onProgress` is told which local entrant is being measured, since
+ * that part happens before the request is even sent.
+ */
+export async function runComparison(
+  input: {
+    entrants: ComparisonEntrantInput[];
+    prompt: string;
+    iterations: number;
+  },
+  onProgress?: (note: string) => void,
+) {
+  const entrants: Array<ComparisonEntrantInput & { recorded?: RecordedMeasurement }> = [];
+
+  for (const entrant of input.entrants) {
+    if (entrant.provider !== "ollama") {
+      entrants.push(entrant);
+      continue;
+    }
+
+    onProgress?.(`Measuring ${entrant.model} on this computer…`);
+
+    try {
+      const recorded = await measureInBrowser({
+        model: entrant.model,
+        prompt: input.prompt,
+        iterations: input.iterations,
+      });
+      entrants.push({ ...entrant, recorded });
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        error: `The local run for ${entrant.model} could not be started`,
+        details: error instanceof Error ? error.message : String(error),
+      } as ApiFailure;
+    }
+  }
+
+  onProgress?.("Scoring…");
+
   return call<ComparisonResultDto>("/comparisons", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, entrants }),
   });
 }
 
@@ -384,40 +481,6 @@ export function shareSessionLog(note?: string) {
       body: JSON.stringify(note ? { confirm: true, note } : { confirm: true }),
     },
   );
-}
-
-// ---------------------------------------------------------------------------
-// Database health
-// ---------------------------------------------------------------------------
-
-export interface DatabaseHealth {
-  connected: boolean;
-  configured: boolean;
-  /** Host and database NAME only, and withheld entirely in production. */
-  host: string | null;
-  database: string | null;
-  pooled: boolean | null;
-  ssl: boolean | null;
-  round_trip_ms: number | null;
-  migrations: {
-    applied: number;
-    pending_rollback: number;
-    latest: string | null;
-    latest_at: string | null;
-  } | null;
-  /** Counts only. Never rows. Null when the tables could not be read. */
-  rows: Record<string, number> | null;
-}
-
-/**
- * Asks the server whether it can actually reach its database.
- *
- * The failure case is not thrown away: a 503 here still carries the diagnosis
- * in `data`, which is the whole point of the endpoint, so the caller gets the
- * failure shape rather than a bare error string.
- */
-export function getDatabaseHealth() {
-  return call<DatabaseHealth>("/health/database");
 }
 
 export type { BenchmarkRun, BenchmarkRequest, BenchmarkRunOutcome, ComparisonReport };

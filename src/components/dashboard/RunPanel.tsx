@@ -180,8 +180,10 @@ export function RunPanel({
       <p className="card-sub">
         <ProviderLogo provider={provider} size={15} style={{ marginRight: 5 }} />
         Provider <strong>{provider}</strong> · model <strong>{model}</strong>.
-        The run happens server-side (keys never reach the browser) and every
-        iteration is recorded with its provenance.
+        {provider === "ollama"
+          ? "The calls go from this browser to the Ollama on this computer; the server only scores what was measured."
+          : "The run happens server-side (keys never reach the browser)."}{" "}
+        Every iteration is recorded with its provenance.
       </p>
 
       {pendingWarning ? (

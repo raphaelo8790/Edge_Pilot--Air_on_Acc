@@ -32,12 +32,13 @@ export default function HistoryPage() {
           {' · '}
           <ArcadeNavLinks
             items={[
-              { href: '/', label: 'home' },
-              { href: '/dashboard', label: 'dashboard' },
-              { href: '/compare', label: 'compare' },
-              { href: '/vision-benchmark', label: 'vision' },
-              { href: '/evidence', label: 'evidence' },
-              { href: '/evaluation', label: 'evaluation' },
+              { href: '/', label: 'Home' },
+              { href: '/dashboard', label: 'Dashboard' },
+              { href: '/compare', label: 'Compare' },
+              { href: '/vision-benchmark', label: 'Vision' },
+              { href: '/evidence', label: 'Evidence' },
+              { href: '/evaluation', label: 'Matrix' },
+              { href: '/setup', label: 'Setup' },
             ]}
           />
         </div>

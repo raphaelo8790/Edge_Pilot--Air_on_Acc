@@ -18,6 +18,7 @@
  * reason attached - not hidden. Hiding them would leave a user wondering where
  * their model went; greying answers the question in place.
  */
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
@@ -371,6 +372,10 @@ export function InstalledModels({ taskType, mode }: Props) {
             {runtime.remedy}
           </div>
         ) : null}
+        <p className="hint" style={{ margin: "8px 0 0" }}>
+          Don&apos;t know how to connect Ollama to EdgePilot?{" "}
+          <Link href="/setup">Set it up in one command, here</Link>.
+        </p>
         <div className="btn-row" style={{ marginTop: 10 }}>
           <button className="btn" onClick={refresh}>
             Check again

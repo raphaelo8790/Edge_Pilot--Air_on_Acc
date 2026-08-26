@@ -31,6 +31,8 @@ model output, so the threat is not execution - it is output being read as a
 **verdict**. The defence is exact matching against a closed label set, with
 anything else recorded as `invalid_output` rather than guessed at.
 
+**Hosted-mode pass.** `VisionBenchmarkRunRequestSchema` accepts `provider: 'groq'` alongside `ollama` and `gemini`.
+
 ## Files
 
 | File | What it is |

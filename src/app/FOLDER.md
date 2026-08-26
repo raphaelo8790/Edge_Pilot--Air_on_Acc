@@ -43,6 +43,7 @@ to carry the dataset upload.
 | [`compare/`](compare/FOLDER.md) | `/compare` - two to four models against each other |
 | [`evaluation/`](evaluation/FOLDER.md) | `/evaluation` - the ten-case matrix, rendered |
 | [`history/`](history/FOLDER.md) | `/history` - this session's runs, download and share |
+| [`setup/`](setup/FOLDER.md) | `/setup` - the two once-only steps for a hosted site: allow this origin in the visitor's Ollama (per-OS commands, with a connection check) and, optionally, the visitor's own Gemini/Groq keys |
 
 ## Connected folders
 

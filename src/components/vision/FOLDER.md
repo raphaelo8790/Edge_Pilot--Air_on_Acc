@@ -40,7 +40,8 @@ Four things had to be got right, and three of them were got wrong first:
 
 | File | What it is |
 |---|---|
-| `RunBuiltInDataset.tsx` | Runs the shipped 21-image dataset from the page and shows the result as a table, with the cell that missed its threshold highlighted. Until it existed, measuring the reference dataset needed a terminal |
+| `RunBuiltInDataset.tsx` | Runs the shipped 21-image dataset from the page, on Ollama (this computer), Gemini or Groq, and shows the result as a table with the cell that missed its threshold highlighted. Model lists come from each provider; the cloud lists are narrowed to models that accept an image |
+| `builtInDataset.ts` | The Ollama run, performed IN THE BROWSER: fetches the manifest and images from `/api/v1/vision-benchmarks/dataset`, runs the shared executor against the visitor's own Ollama, then reads residency for hardware fit. Hosted, the server has no Ollama, so this is the only way a local vision run can happen |
 | `runHistory.ts` | Every run this browser has made - vision, text and code, and comparisons - each capped at 20. Every access is wrapped, because `localStorage` throws outright in some privacy modes rather than returning null |
 | `ThresholdNote.tsx` | States the gate: accuracy, macro F1, invalid-output and success-rate bars, rendered from `DEFAULT_VISION_THRESHOLDS` rather than typed in, so the copy cannot drift from the rule the evaluator applies |
 | `DatasetUpload.tsx` | 403 lines. Folder-per-class picker, `labelOf`, the four blocking declarations, prompt construction from the dataset's own labels, and evidence JSON download |
@@ -63,6 +64,7 @@ These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/vision-benchmarks/`](../../app/api/v1/vision-benchmarks/FOLDER.md)
 - [`src/app/history/`](../../app/history/FOLDER.md)
+- [`src/app/api/v1/vision-benchmarks/dataset/`](../../app/api/v1/vision-benchmarks/dataset/FOLDER.md)
 - [`src/components/`](../FOLDER.md)
 - [`src/components/compare/`](../compare/FOLDER.md)
 - [`src/components/history/`](../history/FOLDER.md)

@@ -105,24 +105,28 @@ export default function Home() {
               the route changes — Pac-Man eats pellets in dark, Mario chases a
               mushroom in light. In cockpit they are plain links. See
               ArcadeNav. */}
-          <div className="hidden items-center gap-1 sm:flex">
+          {/* One line, always. The arcade pixel labels are wider, so the
+              coins get tighter padding there (globals.css) rather than the
+              row wrapping or the buttons on the right breaking. Below md the
+              links are hidden and the page's own buttons do the job. */}
+          <div className="hidden shrink-0 flex-nowrap items-center gap-1 whitespace-nowrap md:flex">
             <ArcadeNavLinks
               items={[
                 { href: '/dashboard', label: 'Dashboard' },
                 { href: '/compare', label: 'Compare' },
                 { href: '/vision-benchmark', label: 'Vision' },
                 { href: '/evidence', label: 'Evidence' },
-                { href: '/history', label: 'History' },
+                { href: '/history', label: 'Session history' },
                 { href: '/evaluation', label: 'Matrix' },
               ]}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <PaletteToggle className="hidden rounded-lg border border-ink-600 px-2.5 py-1.5 text-xs text-mist-400 transition hover:border-pulse-500 hover:text-mist-100 sm:block" />
-            <ThemeToggle className="rounded-lg border border-ink-600 px-2.5 py-1.5 text-sm text-mist-400 transition hover:border-pulse-500 hover:text-mist-100" />
+          <div className="flex shrink-0 flex-nowrap items-center gap-2 whitespace-nowrap">
+            <PaletteToggle className="hidden whitespace-nowrap rounded-lg border border-ink-600 px-2.5 py-1.5 text-xs text-mist-400 transition hover:border-pulse-500 hover:text-mist-100 sm:block" />
+            <ThemeToggle className="whitespace-nowrap rounded-lg border border-ink-600 px-2.5 py-1.5 text-sm text-mist-400 transition hover:border-pulse-500 hover:text-mist-100" />
             <Link
               href="/dashboard"
-              className="rounded-lg bg-pulse-500 px-3.5 py-1.5 text-sm font-semibold text-pulse-ink transition hover:bg-pulse-400 active:translate-y-px"
+              className="whitespace-nowrap rounded-lg bg-pulse-500 px-3.5 py-1.5 text-sm font-semibold text-pulse-ink transition hover:bg-pulse-400 active:translate-y-px"
             >
               Run a benchmark
             </Link>
@@ -169,6 +173,16 @@ export default function Home() {
                   evidence API →
                 </a>
               </div>
+              <p className="ep-rise ep-rise-3 mt-5 text-sm text-mist-500">
+                Running a local model?{' '}
+                <Link
+                  href="/setup"
+                  className="text-mist-300 underline decoration-ink-600 underline-offset-4 transition hover:text-pulse-300"
+                >
+                  Set up Ollama &amp; your API keys
+                </Link>{' '}
+                — one command, once.
+              </p>
               <p className="ep-rise ep-rise-4 ep-mono mt-10 text-xs tracking-wide text-mist-600">
                 measured or recorded results only — the comparison engine
                 refuses estimates
@@ -272,6 +286,20 @@ export default function Home() {
               </li>
             ))}
           </ol>
+
+          {/* A quiet pointer for the one thing a hosted visitor has to do
+              before step 02 works on their own machine. Low contrast on
+              purpose - it is a footnote to the section, not a fourth step. */}
+          <p className="mt-10 border-t border-ink-800 pt-6 text-sm leading-relaxed text-mist-600">
+            Don&apos;t know how to connect Ollama to EdgePilot?{' '}
+            <Link
+              href="/setup"
+              className="text-mist-400 underline decoration-ink-600 underline-offset-4 transition hover:text-pulse-300"
+            >
+              Set it up in one command, and bring your own Gemini and Groq keys, here
+            </Link>
+            .
+          </p>
         </section>
 
         {/* readiness dimensions */}

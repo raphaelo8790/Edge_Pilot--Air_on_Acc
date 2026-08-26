@@ -25,6 +25,7 @@ an export format, and opt-in behaviour.
 | Subfolder | What it holds |
 |---|---|
 | [`logging/`](logging/FOLDER.md) | The session activity log and its store |
+| [`quota/`](quota/FOLDER.md) | `cloudRunQuota.ts` - a small in-memory, per-session cap on cloud vision runs that spend the SERVER's key; a visitor using their own key is not capped. Best-effort, not a security boundary (per process on a serverless host) |
 
 ## Connected folders
 

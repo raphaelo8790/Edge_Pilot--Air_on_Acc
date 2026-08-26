@@ -11,7 +11,10 @@ The complete user journey over the team's real `/api/v1` backend:
 2. **Provider & model** — live catalog from `GET /api/v1/providers`,
    including `is_configured`, `configuration_hint`, database availability and
    server configuration warnings, rendered honestly (unconfigured providers
-   are visible but not selectable).
+   are visible but not selectable). The model field is a list of real names
+   for every provider: Ollama's from the visitor's own runtime (asked from the
+   browser), Gemini's and Groq's from `GET /api/v1/providers/models` - never
+   free text, and the placeholder cannot be submitted.
 3. **Run** — `POST /api/v1/benchmarks` with a controlled task prompt (from
    `benchmark-tasks.json`, text/code tasks; vision tasks belong to the vision
    dashboard), 1–100 iterations, elapsed-time feedback for long runs.
@@ -26,6 +29,15 @@ Wire contract consumed: `docs/internal/benchmark-api.md` — thank you, it is
 written against exactly, including the "all providers failed but the run is
 still evidence" case (the dashboard renders that run with a failure banner
 instead of discarding it) and `persisted: false` (banner + export prompt).
+
+## Where a run happens
+
+An Ollama run is measured **in the browser** against the Ollama on the
+visitor's computer, then scored by the server (`recorded` on
+`POST /api/v1/benchmarks`); a cloud run is measured by the server. The Run panel
+says which. `/setup` is where a visitor allows the site's origin in their Ollama
+(one command, per operating system) and, optionally, pastes their own cloud
+keys, which `api.ts` attaches to every call as headers.
 
 ## Design decisions
 

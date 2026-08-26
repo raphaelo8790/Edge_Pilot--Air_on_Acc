@@ -202,6 +202,10 @@
   font-family: var(--font-pixel), var(--font-display), monospace;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
+  /* Pixel glyphs are wide; tighter coins keep the header on one line. */
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  white-space: nowrap;
   background-image: linear-gradient(180deg, #fff3a8 0%, #ffcc00 45%, #b58c00 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1031,3 +1035,4 @@ a.ep-panel:hover,
 a.ep-panel:active {
   transform: translateY(0);
 }
+

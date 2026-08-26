@@ -5,6 +5,7 @@ import {
 } from '../core/schemas';
 import { VisionBenchmarkEvidence } from '../core/types';
 import { GeminiVisionProvider } from './gemini-provider';
+import { GroqVisionProvider } from './groq-provider';
 import { SharpVisionImageProcessor } from './image-processor';
 import {
   loadVisionDatasetManifest,
@@ -18,6 +19,11 @@ export interface RunVisionBenchmarkOptions {
   repositoryRoot: string;
   environment?: NodeJS.ProcessEnv;
   fetchImplementation?: VisionFetch;
+  /**
+   * In-flight samples for a CLOUD provider. Ignored for Ollama, which is
+   * always sequential. See executor.ts for why.
+   */
+  cloudConcurrency?: number;
 }
 
 export async function runVisionBenchmarkRequest(
@@ -50,11 +56,17 @@ export async function runVisionBenchmarkRequest(
             environment.OLLAMA_HOST ?? 'http://localhost:11434',
           fetchImplementation: options.fetchImplementation,
         })
-      : new GeminiVisionProvider({
-          model: request.model,
-          apiKey: environment.GEMINI_API_KEY ?? '',
-          fetchImplementation: options.fetchImplementation,
-        });
+      : request.provider === 'groq'
+        ? new GroqVisionProvider({
+            model: request.model,
+            apiKey: environment.GROQ_API_KEY ?? '',
+            fetchImplementation: options.fetchImplementation,
+          })
+        : new GeminiVisionProvider({
+            model: request.model,
+            apiKey: environment.GEMINI_API_KEY ?? '',
+            fetchImplementation: options.fetchImplementation,
+          });
 
   const evidence = await executeVisionBenchmark({
     provider,
@@ -66,6 +78,8 @@ export async function runVisionBenchmarkRequest(
     promptVersion: request.promptVersion,
     prompt: request.prompt,
     executionMode: 'live',
+    concurrency:
+      request.provider === 'ollama' ? 1 : options.cloudConcurrency ?? 1,
     deviceProfileId: request.deviceProfileId,
     gitCommitSha: request.gitCommitSha,
     thresholds: request.thresholds,

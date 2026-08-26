@@ -23,7 +23,7 @@ posting files to an endpoint.
 | File | What it is |
 |---|---|
 | `page.tsx` | The workload description, the reference table, and the mount points for both run panels |
-| `actions.ts` | The server action that runs the built-in dataset. Builds the request exactly as the CLI does - same workload id, prompt and prompt version - so a run started here is indistinguishable from one started from a terminal. Writes nothing server-side; the evidence is returned for the browser to keep |
+| `actions.ts` | The server action that runs the built-in dataset on a CLOUD provider (Gemini or Groq) - the local run happens in the browser, see `components/vision/builtInDataset.ts`. Takes the provider, model, session id and the visitor's own keys as arguments, since a server action carries no request headers. Server-key runs are capped per visitor per hour (`core/quota`). Builds the request exactly as the CLI does; writes nothing server-side |
 | `types.ts` | The action's result shape. Separate because a file marked `'use server'` may only export async functions - exporting an interface from one is a build error |
 
 ## Connected folders
@@ -42,5 +42,6 @@ posting files to an endpoint.
 These folders point here. Each link below resolves in both directions.
 
 - [`src/app/`](../FOLDER.md)
+- [`src/core/quota/`](../../core/quota/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

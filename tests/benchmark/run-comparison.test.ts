@@ -53,6 +53,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [{ provider: 'ollama', model: 'a', families: ['llama'] }],
       prompt: 'hi',
@@ -68,6 +69,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [
         { provider: 'ollama', model: 'a', families: ['llama'] },
@@ -89,6 +91,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [
         { provider: 'ollama', model: 'mistral:7b', families: ['llama'] },
@@ -112,6 +115,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [
         { provider: 'ollama', model: 'mistral:7b', families: ['llama'] },
@@ -135,6 +139,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local', gemini: 'cloud' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [
         { provider: 'ollama', model: 'mistral:7b', families: ['llama'] },
@@ -156,6 +161,7 @@ describe('RunComparison', () => {
     const result = await new RunComparison({
       registry: stubRegistry({ ollama: 'local' }),
       createRunner: stubRunnerFactory(t),
+      createRecordedRunner: () => stubRunnerFactory(t)(),
     }).execute({
       entrants: [
         { provider: 'ollama', model: 'mistral:7b', families: ['llama'] },

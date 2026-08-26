@@ -5,7 +5,7 @@ to their modules.
 
 ## What this folder is
 
-Nine endpoints. Every one of them follows the same envelope -
+Eleven endpoints. Every one of them follows the same envelope -
 `{ success, data }` on the way out, `{ success: false, error, details }` on
 failure - because the dashboard renders exactly one error shape and any
 deviation costs a special case in the UI.
@@ -34,6 +34,7 @@ visitor's rows.
 | [`benchmarks/`](benchmarks/FOLDER.md) | `POST` run and record; `GET` list for one owner |
 | [`comparisons/`](comparisons/FOLDER.md) | `POST` compare two or more models |
 | [`local-runtime/`](local-runtime/FOLDER.md) | `GET` is Ollama running, and what does it have |
+| [`providers/models/`](providers/models/FOLDER.md) | `GET ?provider=gemini\|groq` — which models the server's key for that vendor may run. The cloud counterpart of `local-runtime` |
 | [`providers/`](providers/FOLDER.md) | `GET` the provider catalogue and what is configured |
 | [`readiness/`](readiness/FOLDER.md) | `GET` the readiness score for one benchmark |
 | [`session-log/`](session-log/FOLDER.md) | `GET` export, `DELETE` discard |

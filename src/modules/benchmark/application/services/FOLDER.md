@@ -33,6 +33,8 @@ right value for the wrong reason, which would have masked any other fault.
 **The fallback policy**, unchanged and worth restating: fall back only when the
 provider failed for a reason another provider could plausibly not share.
 
+**Hosted-mode pass.** The runner's constructor now takes a `ProviderChain` - `has` and `chainFor` - rather than the concrete registry. The registry satisfies it; so does the single-provider chain a browser-recorded run is scored through (`RecordedProvider`), which is how a run measured in the visitor's browser goes through exactly this code and no other.
+
 ## Files
 
 | File | What it is |

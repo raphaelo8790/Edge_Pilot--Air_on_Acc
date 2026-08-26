@@ -233,6 +233,13 @@ const apiKey = process.env.NEXT_PUBLIC_API_KEY; // BAD!
 const apiKey = process.env.OLLAMA_API_KEY; // GOOD!
 ```
 
+**One exception, by design:** the visitor's own Ollama is called from their
+browser tab (`src/modules/benchmark/infrastructure/browser-ollama.ts`), because
+a hosted server cannot reach a visitor's machine. No key is involved - Ollama
+has none - and the measurements come back to the server to be scored
+(`RecordedProvider`). A visitor may also supply their own Gemini/Groq key per
+request; it is used for that request and never persisted.
+
 ### 2. Environment Variables
 
 ```bash

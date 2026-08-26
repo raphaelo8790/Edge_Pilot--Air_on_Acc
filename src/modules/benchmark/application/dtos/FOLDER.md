@@ -25,7 +25,8 @@ place, with the same name, and everything new was added inside. That is why
 | File | What it is |
 |---|---|
 | `BenchmarkMeasurement.ts` | 227 lines. `MeasuredIteration`, `MeasurementSummary`, `ColdStart`, `FallbackAttempt`, `BenchmarkRun`, `MeasurementStatus`, `ProviderErrorCode`, and `summarise()` - the function where a number would be invented if anywhere |
-| `BenchmarkRequest.ts` | 28 lines. `BenchmarkRequestSchema` and the scaffold's `BenchmarkResponseSchema` |
+| `BenchmarkRequest.ts` | `BenchmarkRequestSchema`, plus `RecordedMeasurementSchema` - a run the visitor's browser measured against its own Ollama (`iterations + 1` responses, the first a cold start, and the residency read before and after). Accepted only with `provider: ollama` |
+| `LocalRuntime.ts` | The local-runtime DTO and `toLocalRuntimeDto`, shared by `GET /api/v1/local-runtime` and the browser probe so the two answers are interchangeable; `parseParameterSize` ("7.2B" to billions) lives here for the same reason |
 
 ## Connected folders
 

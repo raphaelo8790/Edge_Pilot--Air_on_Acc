@@ -36,6 +36,17 @@ const nextConfig = {
   // image small and free of build tooling.
   // https://nextjs.org/docs/app/api-reference/config/next-config-js/output
   output: 'standalone',
+
+  // The built-in vision dataset is read from disk at request time by the
+  // dataset routes and the vision server action. A traced (Vercel or
+  // standalone) build only ships files it can see imported, and a readFile
+  // path is not an import - so without this the hosted site has no images
+  // to serve and every built-in run fails with ENOENT.
+  // https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats
+  outputFileTracingIncludes: {
+    '/api/v1/vision-benchmarks/**': ['./datasets/vision-benchmark/**'],
+    '/vision-benchmark': ['./datasets/vision-benchmark/**'],
+  },
 };
 
 export default nextConfig;

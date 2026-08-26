@@ -17,6 +17,8 @@ The route is thin on purpose. All 899 lines of behaviour live in
 [`src/components/compare/`](../../components/compare/FOLDER.md), where they
 can be tested without a request.
 
+**Hosted-mode pass.** Nothing at this level changed; see `src/components/compare/` for the browser-side measurement of Ollama entrants.
+
 ## Files
 
 | File | What it is |

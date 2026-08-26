@@ -33,6 +33,8 @@ pre-existing evidence files were re-parsed afterwards to confirm nothing broke.
 across the dataset fell from 1322.1 ms to 529.6 ms once a warm-up classification
 ran first - the same model, the same images.
 
+**Hosted-mode pass.** A Groq adapter joined the Gemini one in `infrastructure/`, the run request accepts `groq`, and the executor can classify cloud samples in batches. The built-in dataset can now be run from the visitor's browser against their own Ollama (`components/vision/builtInDataset.ts`, served by `api/v1/vision-benchmarks/dataset`), which is what makes the page work hosted.
+
 ## Files
 
 | File | What it is |

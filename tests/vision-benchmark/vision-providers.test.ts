@@ -1,5 +1,6 @@
 import {
   GeminiVisionProvider,
+  GroqVisionProvider,
   OllamaVisionProvider,
   PreparedVisionImage,
   VisionBenchmarkSample,
@@ -280,5 +281,69 @@ describe('Gemini vision provider', () => {
       success: false,
       errorMessage: 'quota exceeded',
     });
+  });
+});
+
+describe('Groq vision provider', () => {
+  test('sends the image as a data URL through the chat-completions API', async () => {
+    let capturedInput: string | URL | undefined;
+    let capturedInit: RequestInit | undefined;
+    const fetchImplementation: VisionFetch = async (input, init) => {
+      capturedInput = input;
+      capturedInit = init;
+
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: 'hardhat' } }] }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    };
+    const provider = new GroqVisionProvider({
+      apiKey: 'gsk_test',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      fetchImplementation,
+      clock: sequenceClock([100, 160]),
+    });
+
+    const response = await provider.classify(createRequest());
+    const headers = new Headers(capturedInit?.headers);
+    const body = JSON.parse(String(capturedInit?.body));
+
+    expect(String(capturedInput)).toBe('https://api.groq.com/openai/v1/chat/completions');
+    expect(headers.get('authorization')).toBe('Bearer gsk_test');
+    expect(String(capturedInput)).not.toContain('gsk_test');
+    expect(body.model).toBe('meta-llama/llama-4-scout-17b-16e-instruct');
+    expect(body.temperature).toBe(0);
+    expect(body.messages[0].content[0]).toEqual({ type: 'text', text: createRequest().prompt });
+    expect(body.messages[0].content[1].image_url.url).toBe('data:image/png;base64,AQID');
+    expect(response).toEqual({
+      rawOutput: 'hardhat',
+      latencyMs: 60,
+      success: true,
+      errorMessage: null,
+    });
+  });
+
+  test('reports a provider failure without throwing', async () => {
+    const provider = new GroqVisionProvider({
+      apiKey: 'gsk_test',
+      model: 'llama-3.1-8b-instant',
+      fetchImplementation: async () =>
+        new Response(JSON.stringify({ error: { message: 'model does not support images' } }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      clock: sequenceClock([0, 5]),
+    });
+
+    const response = await provider.classify(createRequest());
+
+    expect(response.success).toBe(false);
+    expect(response.errorMessage).toContain('does not support images');
+  });
+
+  test('requires a Groq API key', () => {
+    expect(
+      () => new GroqVisionProvider({ apiKey: '  ', model: 'x' })
+    ).toThrow('GROQ_API_KEY is required.');
   });
 });

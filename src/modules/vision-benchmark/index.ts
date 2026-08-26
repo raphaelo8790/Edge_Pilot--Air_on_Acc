@@ -12,5 +12,6 @@ export * from './infrastructure/image-processor';
 export * from './infrastructure/http';
 export * from './infrastructure/ollama-provider';
 export * from './infrastructure/gemini-provider';
+export * from './infrastructure/groq-provider';
 export * from './infrastructure/evidence-store';
 export * from './infrastructure/run-service';

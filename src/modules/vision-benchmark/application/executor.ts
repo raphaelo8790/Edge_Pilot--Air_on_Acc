@@ -47,6 +47,14 @@ export interface ExecuteVisionBenchmarkInput {
   gitCommitSha: string;
   thresholds?: Partial<VisionBenchmarkThresholds>;
   limitations?: string[];
+  /**
+   * How many samples may be in flight at once. Defaults to 1, which is the
+   * only honest setting for a local model: two requests to one GPU measure
+   * contention, not the model. A cloud provider serves requests
+   * independently, so a hosted run may raise this to fit a serverless time
+   * limit. Order of the recorded responses is the sample order regardless.
+   */
+  concurrency?: number;
   clock?: VisionBenchmarkClock;
 }
 
@@ -175,19 +183,26 @@ export async function executeVisionBenchmark(
   }
 
   const startedAt = clock.nowIso();
-  const responses: VisionProviderResponse[] = [];
+  const concurrency = Math.max(1, Math.floor(input.concurrency ?? 1));
+  const responses: VisionProviderResponse[] = new Array(input.samples.length);
 
-  for (const sample of input.samples) {
-    const image = await input.imageProcessor.prepare(sample);
+  // Batches of `concurrency`, each batch awaited before the next starts, and
+  // each response written to its sample's own slot - so a batch of one is
+  // exactly the sequential loop this used to be, byte for byte in the output.
+  for (let start = 0; start < input.samples.length; start += concurrency) {
+    const batch = input.samples.slice(start, start + concurrency);
 
-    responses.push(
-      await classifySample(
-        input.provider,
-        sample,
-        image,
-        input.prompt,
-        clock
-      )
+    await Promise.all(
+      batch.map(async (sample, offset) => {
+        const image = await input.imageProcessor.prepare(sample);
+        responses[start + offset] = await classifySample(
+          input.provider,
+          sample,
+          image,
+          input.prompt,
+          clock
+        );
+      })
     );
   }
 

@@ -9,6 +9,12 @@ disagree, the script is right and this page is stale.
 
 Owner: Adham Yakout (AI / Local Model & DevOps).
 
+> **Using the hosted site instead?** You do not need any of this. Install
+> Ollama, pull a model, and open the site's **Setup** page: it shows the one
+> command that lets the site talk to your Ollama, and where to paste your own
+> Gemini or Groq key if you have one. This page is for running the whole
+> application on your own machine.
+
 ---
 
 ## What you need before you start

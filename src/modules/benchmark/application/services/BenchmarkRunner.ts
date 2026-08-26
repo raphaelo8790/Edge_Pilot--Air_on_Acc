@@ -29,7 +29,7 @@ import {
   isRetryableProviderError,
   type ProviderErrorCode,
 } from '../../infrastructure/providers/errors';
-import type { ProviderRegistry } from '../../infrastructure/providers/ProviderRegistry';
+
 import type {
   MeasuredAIProvider,
   MeasuredResponse,
@@ -121,9 +121,19 @@ export interface BenchmarkRunOutcome {
   terminalErrorCode: ProviderErrorCode | null;
 }
 
+/**
+ * What the runner needs from a registry: a chain to walk. The full registry
+ * satisfies it; so does the single-provider chain a browser-recorded run is
+ * scored through.
+ */
+export interface ProviderChain {
+  has(name: string): boolean;
+  chainFor(requested: string): MeasuredAIProvider[];
+}
+
 export class BenchmarkRunner {
   constructor(
-    private readonly registry: ProviderRegistry,
+    private readonly registry: ProviderChain,
     private readonly readinessCalculator: ReadinessCalculator,
     /**
      * Optional. Reads memory residency from the runtime after a run so that

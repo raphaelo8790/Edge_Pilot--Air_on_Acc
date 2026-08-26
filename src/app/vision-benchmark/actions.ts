@@ -29,6 +29,7 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
 import { logForSession } from '@/core/logging/sessionLogStore';
+import { CLOUD_RUNS_PER_HOUR, takeCloudRun } from '@/core/quota/cloudRunQuota';
 
 import {
   runVisionBenchmarkRequest,
@@ -46,7 +47,11 @@ import type { RunBuiltInResult } from './types';
  * a copy of this project with no git history is still allowed to benchmark.
  */
 function readGitCommit(repositoryRoot: string): string {
-  const override = process.env.VISION_GIT_COMMIT_SHA;
+  // Explicit override first; then the value a hosted build already knows.
+  // Vercel sets VERCEL_GIT_COMMIT_SHA and ships no .git folder, so without
+  // this every hosted run would be stamped 0000000.
+  const override =
+    process.env.VISION_GIT_COMMIT_SHA ?? process.env.VERCEL_GIT_COMMIT_SHA;
 
   if (override) {
     return override;
@@ -63,26 +68,37 @@ function readGitCommit(repositoryRoot: string): string {
 }
 
 /**
- * @param model      The tag exactly as the runtime reports it.
- * @param sessionId  The browser's own id, passed rather than read from a
- *   header: a server action is invoked through Next's own POST endpoint, not
- *   through the typed API client, so nothing attaches `x-edgepilot-session`
- *   to it. Optional, and an absent or malformed value simply means this run
- *   is not recorded - the same rule every route follows.
+ * Every argument is passed rather than read from a header, because a server
+ * action is invoked through Next's own POST endpoint, not through the typed
+ * API client - nothing attaches `x-edgepilot-session` or the visitor's key
+ * headers to it.
+ *
+ * - `provider`   which cloud vendor. Ollama is NOT accepted here: a hosted
+ *   server has no Ollama, so the local run happens in the browser instead
+ *   (see components/vision/builtInDataset.ts).
+ * - `model`      the model id exactly as the vendor lists it.
+ * - `sessionId`  the browser's own id. Optional; absent means the run is not
+ *   recorded in the activity log, the same rule every route follows.
+ * - `keys`       the visitor's own API keys, if they set any on /setup. Used
+ *   for this call and never stored; see visitor-keys.ts.
  */
-export async function runBuiltInVisionBenchmark(
-  model: string,
-  sessionId?: string | null
-): Promise<RunBuiltInResult> {
-  const log = logForSession(sessionId);
+export async function runBuiltInVisionBenchmark(input: {
+  provider: 'gemini' | 'groq';
+  model: string;
+  sessionId?: string | null;
+  keys?: { gemini?: string | null; groq?: string | null };
+}): Promise<RunBuiltInResult> {
+  const log = logForSession(input.sessionId);
   const correlationId = randomUUID();
+  const provider = input.provider === 'groq' ? 'groq' : 'gemini';
+  const model = input.model;
 
   if ((process.env.VISION_BENCHMARK_IN_APP ?? '').trim() !== 'true') {
     return {
       ok: false,
       error:
         'Running from the page is off. Set VISION_BENCHMARK_IN_APP=true in .env ' +
-        'and restart the server, or use: npm run vision:run:ollama -- --model=<tag>',
+        'and restart the server, or use: npm run vision:run:gemini -- --model=<id>',
     };
   }
 
@@ -91,13 +107,49 @@ export async function runBuiltInVisionBenchmark(
   if (!tag) {
     return {
       ok: false,
-      error:
-        'Pass the model tag exactly as the runtime reports it, including the ' +
-        'part after the colon - for example llava:latest, not llava.',
+      error: 'Choose a model first.',
     };
   }
 
   const repositoryRoot = process.cwd();
+
+  // The visitor's key wins for this call; the server's is the fallback. The
+  // key never appears in the log or the evidence.
+  const visitorGemini = (input.keys?.gemini ?? '').trim();
+  const visitorGroq = (input.keys?.groq ?? '').trim();
+  const environment: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...(visitorGemini ? { GEMINI_API_KEY: visitorGemini } : {}),
+    ...(visitorGroq ? { GROQ_API_KEY: visitorGroq } : {}),
+  };
+
+  const configured =
+    provider === 'gemini' ? environment.GEMINI_API_KEY : environment.GROQ_API_KEY;
+  const usingVisitorKey = Boolean(provider === 'gemini' ? visitorGemini : visitorGroq);
+
+  if (!configured || configured.trim() === '') {
+    return {
+      ok: false,
+      error:
+        `${provider === 'gemini' ? 'Gemini' : 'Groq'} has no API key on this server. ` +
+        'Add your own on the setup page, or ask the operator to configure one.',
+    };
+  }
+
+  // The operator's key is a shared resource; the visitor's own is not.
+  if (!usingVisitorKey) {
+    const quota = takeCloudRun(input.sessionId);
+
+    if (!quota.allowed) {
+      const minutes = Math.ceil(quota.retryAfterSeconds / 60);
+      return {
+        ok: false,
+        error:
+          `This site allows ${CLOUD_RUNS_PER_HOUR} cloud runs an hour on its own key, and you have used them. ` +
+          `Try again in about ${minutes} minute${minutes === 1 ? '' : 's'}, or add your own API key on the setup page for unlimited runs.`,
+      };
+    }
+  }
 
   log?.record(
     'info',
@@ -105,8 +157,9 @@ export async function runBuiltInVisionBenchmark(
     `Vision benchmark requested for ${tag}`,
     {
       workload_id: VISION_WORKLOAD_ID,
-      provider: 'ollama',
+      provider,
       model: tag,
+      key_source: usingVisitorKey ? 'visitor' : 'server',
       dataset: 'built-in reference set',
       prompt_version: VISION_PROMPT_VERSION,
     },
@@ -117,15 +170,19 @@ export async function runBuiltInVisionBenchmark(
     const evidence = await runVisionBenchmarkRequest(
       {
         workloadId: VISION_WORKLOAD_ID,
-        provider: 'ollama',
+        provider,
         model: tag,
-        deviceProfileId:
-          process.env.VISION_DEVICE_PROFILE_ID ?? 'local-workstation',
+        // A cloud model runs on the vendor's hardware; the profile names the
+        // caller's environment, which for a hosted run is the server.
+        deviceProfileId: process.env.VISION_DEVICE_PROFILE_ID ?? 'cloud-via-server',
         gitCommitSha: readGitCommit(repositoryRoot),
         promptVersion: VISION_PROMPT_VERSION,
         prompt: VISION_BENCHMARK_PROMPT,
       },
-      { repositoryRoot }
+      // Cloud vendors serve requests independently, so seven at a time
+      // brings 21 images inside a serverless time limit without changing
+      // what is measured per request.
+      { repositoryRoot, environment, cloudConcurrency: 7 }
     );
 
     // The scores, not the images and not the model's text. Enough to answer

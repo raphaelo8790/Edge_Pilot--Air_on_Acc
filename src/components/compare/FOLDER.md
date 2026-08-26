@@ -32,6 +32,8 @@ It also refuses the same model twice, mirroring the planner's refusal - the
 labels are `provider + model` and the report's tally is keyed by them, so a
 duplicate collides onto one key and merges two entrants into one verdict.
 
+**Hosted-mode pass.** Ollama entrants are measured in the browser, one after another, before the request is sent, with the progress line naming the model being measured; cloud entrants are measured by the server. The model field is a list for every provider - the visitor's installed models for Ollama, the vendor's list for Gemini and Groq - and the placeholder cannot be submitted. The second entrant defaults to the first configured cloud provider (Gemini before Groq) so the page opens as the local-versus-cloud pairing the app exists for, and never overrides a choice already made.
+
 ## Files
 
 | File | What it is |

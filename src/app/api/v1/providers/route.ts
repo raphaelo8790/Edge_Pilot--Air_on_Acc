@@ -18,6 +18,7 @@ import {
   benchmarkRegistry,
 } from '@/modules/benchmark/infrastructure/container';
 import { logForRequest } from '@/core/logging/sessionLogStore';
+import { visitorKeysFrom } from '@/modules/benchmark/infrastructure/visitor-keys';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,9 @@ export async function GET(request: Request) {
   const log = logForRequest(request);
 
   try {
-    const availability = benchmarkRegistry().availability();
+    // "configured" answers for THIS visitor: their own key counts, and is
+    // used for this request only.
+    const availability = benchmarkRegistry(visitorKeysFrom(request)).availability();
     const warnings = benchmarkConfigWarnings();
 
     let catalog: ProviderRow[] = [];

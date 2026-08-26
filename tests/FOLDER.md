@@ -4,7 +4,7 @@
 
 ## What this folder is
 
-322 tests across 29 suites, mirroring `src/` one level down. Nothing here
+348 tests across 33 suites, mirroring `src/` one level down. Nothing here
 touches a network, a real timer, a real model or a real database - every
 adapter takes its `fetch` and its clock by injection, which is what makes the
 suite deterministic. A benchmark test that depended on real latency would be a

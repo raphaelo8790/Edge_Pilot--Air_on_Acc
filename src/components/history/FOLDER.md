@@ -28,11 +28,13 @@ model describing your pictures. The table marks every row `built-in` or
 The session id is never rendered, the same rule
 `components/dashboard/session.ts` states.
 
+**Hosted-mode pass.** The database panel that sat at the bottom of the page was removed with its endpoint - a debugging aid on a user-facing page, and one that told any visitor there was a Postgres to talk to. The vision-runs block was brought in line with the other two (per-row download, download-all, clear; no checkbox selection). The text-and-code table gained a **Measured in** column: `this browser` for an Ollama run the tab made against the visitor's own machine, `server` for a cloud run.
+
 ## Files
 
 | File | What it is |
 |---|---|
-| `SessionHistory.tsx` | 616 lines. Three run tables, selection and bulk download, the log export, and the consent-gated share |
+| `SessionHistory.tsx` | Three run tables, each with per-row and bulk download and clear, the log export, and the consent-gated share |
 
 ## Connected folders
 

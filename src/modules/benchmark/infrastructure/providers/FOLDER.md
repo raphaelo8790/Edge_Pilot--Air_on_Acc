@@ -31,6 +31,7 @@ inflate it.
 | File | What it is |
 |---|---|
 | `BaseProvider.ts` | 328 lines. Timing, timeouts, error classification, iteration. `ProviderFailureError` and its brand |
+| `RecordedProvider.ts` | Replays measurements the visitor's browser already took against its own Ollama, so `BenchmarkRunner` scores them with the same cold-start isolation, summary, hardware fit and readiness as a server-measured run. No fallback: a cloud model is not a substitute measurement of the visitor's machine. `residencyProbe()` hands back the before/after readings the browser took |
 | `OllamaProvider.ts` | 167 lines. The local adapter. `POST /api/generate` with `stream: true` returns newline-delimited JSON, one object per token, with durations in **nanoseconds**. It streams even though the tokens are never displayed, because time-to-first-token cannot be measured from a buffered response - with `stream: false` the first byte and the last byte arrive together |
 | `GroqProvider.ts` | 176 lines. OpenAI-compatible SSE. Usage is omitted from streamed chunks unless `stream_options: { include_usage: true }` is sent. Groq also reports `x_groq.usage.completion_time` in **seconds** - server-side generation time excluding queueing, a better throughput denominator than our wall clock |
 | `GeminiProvider.ts` | 182 lines. `:streamGenerateContent` with `alt=sse`. `usageMetadata` repeats across chunks, so the last one wins. The key travels in the `x-goog-api-key` **header, never the query string** - a URL lands in server logs and proxy logs; a header does not |

@@ -16,10 +16,12 @@ import { z } from 'zod';
 import { digestPrompt } from '@/core/logging/SessionLog';
 import { logForRequest } from '@/core/logging/sessionLogStore';
 import { BenchmarkRequestSchema } from '@/modules/benchmark/application/dtos/BenchmarkRequest';
+import { visitorKeysFrom } from '@/modules/benchmark/infrastructure/visitor-keys';
 import { statusForFailedRun } from '@/modules/benchmark/application/use-cases/RunBenchmark';
 import {
   benchmarkRepository,
   runBenchmarkUseCase,
+  scoreRecordedBenchmarkUseCase,
 } from '@/modules/benchmark/infrastructure/container';
 
 // A benchmark runs real inference; it must never be statically evaluated at
@@ -81,6 +83,11 @@ export async function POST(request: Request) {
       provider: parsed.data.provider,
       model: parsed.data.model ?? null,
       iterations: parsed.data.iterations ?? null,
+      // A recorded run was measured by the visitor's browser against their
+      // own Ollama; this server only scores it. Worth a line in the record,
+      // because it is the difference between "this machine" and "theirs".
+      measured_by: parsed.data.recorded ? 'browser' : 'server',
+      local_host: parsed.data.recorded?.host ?? null,
       // Content is never stored; the digest proves two runs used the same
       // prompt without reproducing it.
       prompt: digestPrompt(parsed.data.prompt ?? '', log.includePromptText),
@@ -89,7 +96,10 @@ export async function POST(request: Request) {
   );
 
   try {
-    const outcome = await runBenchmarkUseCase().execute(parsed.data);
+    const useCase = parsed.data.recorded
+      ? scoreRecordedBenchmarkUseCase(parsed.data.recorded)
+      : runBenchmarkUseCase(visitorKeysFrom(request));
+    const outcome = await useCase.execute(parsed.data);
 
     if (!outcome.ok) {
       log?.record(

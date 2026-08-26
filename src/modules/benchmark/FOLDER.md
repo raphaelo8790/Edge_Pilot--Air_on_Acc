@@ -34,6 +34,8 @@ This is where most of the fix list landed. In summary:
 - A pre-flight egress warning answers "is this prompt about to leave the
   machine" **before** the request rather than after it.
 
+**Hosted-mode pass.** The module now has a browser edge: `infrastructure/browser-ollama.ts` runs the unchanged Ollama catalogue, adapter and residency probe from the visitor's tab, and `infrastructure/providers/RecordedProvider.ts` replays what the tab measured through the same runner on the server. `CloudCatalog.ts` lists what a Gemini or Groq key may run; `visitor-keys.ts` lets a visitor's own key stand in for the server's for one request. The hexagonal shape held: the browser reuses infrastructure, the application layer gained one interface (`ProviderChain`) and one DTO (`LocalRuntime.ts`), and the core did not change.
+
 ## Subfolders
 
 | Layer | What is in it |

@@ -24,6 +24,8 @@ question to the write path.
 There is **no UI for this endpoint yet**. It works and is tested; nothing in the
 dashboard calls it.
 
+**Hosted-mode pass.** Each entrant may carry a `recorded` measurement from the visitor's browser (Ollama only; length must be `iterations + 1`, enforced in `superRefine`). Families and parameter size for a local entrant now arrive from the browser's own catalogue too, since the server's `localModelCatalogue()` sees nothing when hosted. `parseParameterSize` moved to `application/dtos/LocalRuntime.ts` so both sides use one parser. The visitor's own cloud keys apply per request.
+
 ## Files
 
 | File | What it is |

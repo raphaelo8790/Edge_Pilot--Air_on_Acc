@@ -29,7 +29,7 @@ built-in seven.
 |---|---|
 | `vision-benchmark.test.ts` | 356 lines. The workload end to end: metrics, thresholds, evidence shape |
 | `vision-execution.test.ts` | 362 lines. The executor, including warm-up behaviour and its opt-out |
-| `vision-providers.test.ts` | 238 lines. The Ollama and Gemini vision adapters |
+| `vision-providers.test.ts` | The Ollama, Gemini and Groq vision adapters |
 | `vision-infrastructure.test.ts` | 204 lines. Image processing, manifest loading, the evidence store |
 | `vision-api.test.ts` | 78 lines. The `/api/v1/vision-benchmarks` route |
 

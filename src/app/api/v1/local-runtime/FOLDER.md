@@ -22,6 +22,8 @@ never a bare failure, always the command that fixes it.
 No credential is involved and no prompt is sent: this reads a version string and
 a model list.
 
+**Hosted-mode pass.** This route describes the **server's** machine, which hosted is a container with no Ollama. The dashboard, the comparison and the vision page no longer call it; they probe the visitor's own Ollama from the browser (`infrastructure/browser-ollama.ts`) and get the same DTO, now shared through `application/dtos/LocalRuntime.ts`. The route stays for the CLI and for a server that sits beside an Ollama.
+
 ## Files
 
 | File | What it is |

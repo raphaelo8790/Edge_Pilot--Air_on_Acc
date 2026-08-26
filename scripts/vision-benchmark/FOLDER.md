@@ -31,7 +31,7 @@ Pass the model explicitly.
 |---|---|
 | `generate-fixtures.mjs` | 727 lines. `npm run vision:fixtures`. Builds the dataset images deterministically. Called automatically by `prebuild` and `pretest`, so a build or a test run never starts from a missing dataset |
 | `validate-dataset.ts` | 76 lines. `npm run vision:validate`. Checks the manifest against the files on disk |
-| `run.ts` | 114 lines. `npm run vision:run:ollama` / `vision:run:gemini`. A live run against a real model, writing to `evidence/vision-benchmark/` |
+| `run.ts` | 114 lines. `npm run vision:run:ollama` / `vision:run:gemini` / `vision:run:groq`. A live run against a real model, writing to `evidence/vision-benchmark/` |
 | `generate-controlled-evidence.ts` | 144 lines. `npm run vision:evidence:controlled`. Deterministic runs against scripted providers - proves the pipeline, not the model |
 
 ## Connected folders

@@ -92,10 +92,11 @@ export default async function EvaluationPage() {
           {' · '}
           <ArcadeNavLinks
             items={[
-              { href: '/', label: 'home' },
-              { href: '/evidence', label: 'evidence' },
-              { href: '/dashboard', label: 'dashboard' },
-              { href: '/history', label: 'history' },
+              { href: '/', label: 'Home' },
+              { href: '/evidence', label: 'Evidence' },
+              { href: '/dashboard', label: 'Dashboard' },
+              { href: '/history', label: 'Session history' },
+              { href: '/setup', label: 'Setup' },
             ]}
           />
         </div>

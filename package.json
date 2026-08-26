@@ -17,6 +17,7 @@
     "vision:evidence:controlled": "node --import tsx scripts/vision-benchmark/generate-controlled-evidence.ts",
     "vision:run:ollama": "node --import tsx scripts/vision-benchmark/run.ts --provider=ollama",
     "vision:run:gemini": "node --import tsx scripts/vision-benchmark/run.ts --provider=gemini",
+    "vision:run:groq": "node --import tsx scripts/vision-benchmark/run.ts --provider=groq",
     "eval:matrix": "node --import tsx scripts/evaluation/ten-case-matrix.ts",
     "bench:evidence:failures": "node --import tsx scripts/benchmark/capture-failure-evidence.ts",
     "bench:run": "node --import tsx scripts/benchmark/run-benchmark.ts",

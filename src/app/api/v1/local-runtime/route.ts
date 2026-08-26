@@ -16,7 +16,7 @@
 import { NextResponse } from 'next/server';
 import { logForRequest } from '@/core/logging/sessionLogStore';
 import { OllamaCatalog } from '@/modules/benchmark/infrastructure/OllamaCatalog';
-import { classifyModality } from '@/modules/benchmark/core/services/ModelModality';
+import { toLocalRuntimeDto } from '@/modules/benchmark/application/dtos/LocalRuntime';
 import {
   assertServerSide,
   loadBenchmarkConfig,
@@ -57,40 +57,11 @@ export async function GET(request: Request) {
       }
     );
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        provider: 'ollama',
-        state: status.state,
-        ok: status.ok,
-        host: status.host,
-        version: status.version,
-        message: status.message,
-        remedy: status.remedy,
-        model_count: status.models.length,
-        // Each model carries what kind of work it can do. The classifier
-        // reads the families the runtime reports; vision and embedding are
-        // identified positively, and text is the residual - which is why the
-        // confidence travels with the verdict instead of being dropped.
-        models: status.models.map((model) => {
-          const verdict = classifyModality(model.name, model.families);
-
-          return {
-            name: model.name,
-            size_bytes: model.sizeBytes,
-            parameter_size: model.parameterSize,
-            quantization: model.quantization,
-            families: model.families,
-            modality: verdict.modality,
-            modality_confidence: verdict.confidence,
-            modality_reason: verdict.reason,
-            // Loaded right now, from /api/ps. Null when that call failed —
-            // "we could not ask" is not "it is asleep".
-            resident: model.resident,
-          };
-        }),
-      },
-    });
+    // The same mapping the browser applies to its own probe, so the two
+    // answers are interchangeable. NOTE: hosted, this route describes the
+    // SERVER's machine, which has no Ollama; the dashboard asks the
+    // visitor's browser instead (see infrastructure/browser-ollama.ts).
+    return NextResponse.json({ success: true, data: toLocalRuntimeDto(status) });
   } catch (error) {
     console.error('Local runtime status error:', error);
 

@@ -45,7 +45,8 @@ Both now use `String.fromCharCode.apply(null, Array.from(...))`.
 | `browser-ollama-provider.ts` | 171 lines. `providerName = 'ollama-browser'`, posts to the user's own `/api/chat` from the tab |
 | `image-processor.ts` | 174 lines. `SharpVisionImageProcessor` - the server-side equivalent |
 | `ollama-provider.ts` | 139 lines. The server-side local vision adapter |
-| `gemini-provider.ts` | 174 lines. The cloud vision adapter |
+| `gemini-provider.ts` | 174 lines. The Gemini cloud vision adapter |
+| `groq-provider.ts` | The Groq cloud vision adapter: OpenAI chat-completions dialect, image as a data URL, temperature 0, key in the Authorization header. Only the Llama 4 family accepts images; the catalogue marks which |
 | `manifest-loader.ts` | 50 lines. Loads and validates `datasets/vision-benchmark/manifest.json`, including its SHA-256 |
 | `run-service.ts` | 80 lines. `runVisionBenchmarkRequest` - what the API route calls |
 | `http.ts` | 38 lines. The injected `fetch` and clock. A deliberate copy of the benchmark module's, not a shared import |

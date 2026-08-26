@@ -119,6 +119,26 @@ Open [http://localhost:3000](http://localhost:3000).
 Environment variables are listed in [`.env.example`](.env.example).  
 **Never put secrets in `NEXT_PUBLIC_` variables** — API keys stay on the server only.
 
+### Using the hosted site
+
+EdgePilot is built to run on Vercel with a Neon database, and to measure the
+AI on **your** computer from there:
+
+- **Local models (Ollama)** are called from your browser tab, not from the
+  server — the server has no Ollama and cannot reach your machine. Once, tell
+  Ollama to trust the site's origin (`OLLAMA_ORIGINS`); the **Setup** page
+  shows the exact command for Windows, macOS and Linux and checks that it
+  worked. The timings are sent to the server to be scored and recorded like
+  any other run.
+- **Cloud models (Gemini, Groq)** are called by the server, where a key can
+  be kept out of a web page. Paste your own keys on the Setup page to use
+  those instead of the site's; they stay in your browser and are used per
+  request, never stored. Runs on the site's own key are capped per visitor
+  per hour.
+
+The list of environment variables a deployment needs is at the end of
+[`.env.example`](.env.example).
+
 ---
 
 ## Security (short version)

@@ -22,6 +22,7 @@ all.
 
 | File | What it covers |
 |---|---|
+| `cloud-run-quota.test.ts` | The per-visitor cap on cloud vision runs made with the server's key: the allowance, the hour window, and session separation |
 | `session-log.test.ts` | 224 lines. Redaction, prompt digests, the share payload and its consent statement, and the in-memory store's bounds |
 
 ## Connected folders
@@ -35,6 +36,7 @@ all.
 These folders point here. Each link below resolves in both directions.
 
 - [`src/core/`](../../src/core/FOLDER.md)
+- [`src/core/quota/`](../../src/core/quota/FOLDER.md)
 - [`tests/`](../FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

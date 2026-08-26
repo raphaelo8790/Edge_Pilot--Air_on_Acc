@@ -18,6 +18,7 @@
 
 import type { ProviderRegistry } from '../../infrastructure/providers/ProviderRegistry';
 import type { BenchmarkRunner, BenchmarkRunOutcome } from '../services/BenchmarkRunner';
+import type { RecordedMeasurement } from '../dtos/BenchmarkRequest';
 import type { ProviderTier } from '../../core/services/PrivacyAssessor';
 import {
   planComparison,
@@ -46,6 +47,11 @@ export interface ComparisonEntrantRequest {
    * entrant rather than estimated.
    */
   parametersBillions?: number | null;
+  /**
+   * Present when the visitor's browser already measured this entrant against
+   * its own Ollama. The server scores it instead of calling anything.
+   */
+  recorded?: RecordedMeasurement;
 }
 
 export interface RunComparisonRequest {
@@ -80,6 +86,8 @@ export interface RunComparisonDependencies {
   registry: ProviderRegistry;
   /** A fresh runner. Taken as a factory so each call gets clean state. */
   createRunner: () => BenchmarkRunner;
+  /** A runner that replays a browser-recorded measurement. See RecordedProvider. */
+  createRecordedRunner: (recorded: RecordedMeasurement) => BenchmarkRunner;
 }
 
 function label(provider: string, model: string): string {
@@ -169,7 +177,10 @@ export class RunComparison {
     }
 
     const runOne = async (entrant: (typeof described)[number]) => {
-      const outcome = await this.deps.createRunner().run({
+      const runner = entrant.recorded
+        ? this.deps.createRecordedRunner(entrant.recorded)
+        : this.deps.createRunner();
+      const outcome = await runner.run({
         provider: entrant.provider,
         model: entrant.model,
         prompt: request.prompt,

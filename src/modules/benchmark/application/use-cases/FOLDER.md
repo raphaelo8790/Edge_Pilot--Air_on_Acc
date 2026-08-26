@@ -29,6 +29,8 @@ so a caller that wants to store them can.
 reaching for `Promise.all` - which matters, because running two local models
 concurrently measures GPU contention rather than the models.
 
+**Hosted-mode pass.** `RunComparison` takes a second factory, `createRecordedRunner`, used for any entrant that arrives with a `recorded` measurement from the visitor's browser. `RunBenchmark` is unchanged: the container hands it a runner built around the recording, and it validates, persists and returns as it always did.
+
 ## Files
 
 | File | What it is |

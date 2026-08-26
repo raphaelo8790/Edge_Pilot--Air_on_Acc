@@ -14,9 +14,8 @@
  * components/dashboard/session.ts states.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { DatabaseStatus } from './DatabaseStatus';
 import {
   downloadSessionLog,
   getSharePreview,
@@ -26,6 +25,7 @@ import {
 import { VISION_DATASET_ID } from '@/modules/vision-benchmark/core/types';
 import {
   useStoredRuns,
+  clearRuns,
   useStoredBenchmarkRuns,
   clearBenchmarkRuns,
   useStoredComparisonRuns,
@@ -71,44 +71,12 @@ export function SessionHistory() {
   const runs = useStoredRuns();
   const benchRuns = useStoredBenchmarkRuns();
   const comparisons = useStoredComparisonRuns();
-  const [selected, setSelected] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<SharePreview | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const shareable = useMemo(() => runs.filter(isShareable).length, [runs]);
 
-  const toggle = useCallback((key: number) => {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
-
-  const chosen = runs.filter((run) => selected.has(run.storedAt));
-
-  function downloadChosen(list: StoredVisionRun[], label: string) {
-    if (list.length === 0) return;
-
-    if (list.length === 1) {
-      saveJson(
-        `edgepilot-vision-${list[0].evidence.model.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`,
-        list[0].evidence
-      );
-      return;
-    }
-
-    // A bundle rather than a burst of downloads: browsers block the second and
-    // subsequent saves when a click triggers several at once.
-    saveJson(`edgepilot-vision-${label}-${list.length}-runs.json`, {
-      exported_at: new Date().toISOString(),
-      run_count: list.length,
-      note: 'Vision benchmark runs exported from this browser. Each entry is a complete evidence document in the same shape the CLI writes.',
-      runs: list.map((run) => run.evidence),
-    });
-  }
 
   /**
    * `error` is the short label; `details` is the sentence that says what to do
@@ -184,6 +152,7 @@ export function SessionHistory() {
                   <tr>
                     <th className="px-5 py-3 font-medium">Model</th>
                     <th className="px-5 py-3 font-medium">Provider</th>
+                    <th className="px-5 py-3 font-medium">Measured in</th>
                     <th className="px-5 py-3 font-medium">Iterations</th>
                     <th className="px-5 py-3 font-medium">Success</th>
                     <th className="px-5 py-3 font-medium">Latency</th>
@@ -214,6 +183,13 @@ export function SessionHistory() {
                           {entry.run.effective_provider ??
                             entry.run.requested_provider}
                           {entry.run.fallback_used ? ' (fallback)' : ''}
+                        </td>
+                        <td className="ep-mono px-5 py-4 text-xs text-mist-500">
+                          {entry.measuredIn === 'browser'
+                            ? 'this browser'
+                            : entry.measuredIn === 'server'
+                              ? 'server'
+                              : '—'}
                         </td>
                         <td className="ep-mono px-5 py-4 text-mist-300">
                           {sum.iterations_succeeded}/{sum.iterations_run}
@@ -409,8 +385,8 @@ export function SessionHistory() {
             Vision runs
           </h2>
           <p className="mt-1 text-sm text-mist-400">
-            Stored in this browser only. Tick the ones you want, or take the
-            lot. Downloading never contacts the server.
+            From the vision benchmark page. Stored in this browser only —
+            downloading never contacts the server.
           </p>
         </div>
 
@@ -424,9 +400,6 @@ export function SessionHistory() {
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="ep-mono bg-ink-950/70 text-[11px] uppercase tracking-wider text-mist-500">
                   <tr>
-                    <th className="px-5 py-3 font-medium">
-                      <span className="sr-only">Select</span>
-                    </th>
                     <th className="px-5 py-3 font-medium">Model</th>
                     <th className="px-5 py-3 font-medium">Dataset</th>
                     <th className="px-5 py-3 font-medium">Accuracy</th>
@@ -434,6 +407,7 @@ export function SessionHistory() {
                     <th className="px-5 py-3 font-medium">Median</th>
                     <th className="px-5 py-3 font-medium">Gate</th>
                     <th className="px-5 py-3 font-medium">When</th>
+                    <th className="px-5 py-3 font-medium">Evidence</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-700/70">
@@ -444,14 +418,6 @@ export function SessionHistory() {
                         key={run.storedAt}
                         className="transition hover:bg-ink-800/50"
                       >
-                        <td className="px-5 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(run.storedAt)}
-                            onChange={() => toggle(run.storedAt)}
-                            aria-label={`Select the ${run.evidence.model} run`}
-                          />
-                        </td>
                         <td className="px-5 py-4 font-semibold text-mist-100">
                           {run.evidence.model}
                         </td>
@@ -481,41 +447,52 @@ export function SessionHistory() {
                         <td className="ep-mono px-5 py-4 text-xs text-mist-500">
                           {new Date(run.storedAt).toLocaleString()}
                         </td>
+                        <td className="px-5 py-4">
+                          <button
+                            type="button"
+                            className="btn"
+                            onClick={() =>
+                              saveJson(
+                                `edgepilot-vision-${run.evidence.model.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`,
+                                run.evidence
+                              )
+                            }
+                          >
+                            download
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-
             <div className="btn-row px-6 py-5">
               <button
                 type="button"
-                className="btn"
-                disabled={chosen.length === 0}
-                onClick={() => downloadChosen(chosen, 'selected')}
-              >
-                Download selected ({chosen.length})
-              </button>
-              <button
-                type="button"
                 className="btn btn-primary"
-                onClick={() => downloadChosen(runs, 'all')}
+                onClick={() =>
+                  // A bundle rather than a burst of downloads: browsers block
+                  // the second and subsequent saves when one click triggers
+                  // several at once.
+                  saveJson(`edgepilot-vision-all-${runs.length}-runs.json`, {
+                    exported_at: new Date().toISOString(),
+                    run_count: runs.length,
+                    note: 'Vision benchmark runs exported from this browser. Each entry is a complete evidence document in the same shape the CLI writes.',
+                    runs: runs.map((run) => run.evidence),
+                  })
+                }
               >
                 Download all ({runs.length})
               </button>
               <button
                 type="button"
                 className="btn"
-                onClick={() =>
-                  setSelected(
-                    selected.size === runs.length
-                      ? new Set()
-                      : new Set(runs.map((run) => run.storedAt))
-                  )
-                }
+                onClick={() => {
+                  clearRuns();
+                }}
               >
-                {selected.size === runs.length ? 'Select none' : 'Select all'}
+                Clear these
               </button>
             </div>
           </>
@@ -615,9 +592,6 @@ export function SessionHistory() {
           </div>
         ) : null}
       </section>
-
-      {/* ---------------------------------------------------------------- */}
-      <DatabaseStatus />
     </div>
   );
 }

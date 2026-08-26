@@ -26,6 +26,17 @@ with a fixed HTTP status and a fixed retry policy. Secrets are read once,
 server-side, and never cross into a response or a client bundle. 122 tests, and
 three scripts that regenerate the evidence rather than asserting it.
 
+**Hosted mode (added later).** The Ollama adapter, catalogue and residency
+probe are plain `fetch` code, so `infrastructure/browser-ollama.ts` runs them
+unchanged **in the visitor's browser** against their own machine - the only
+Ollama a hosted server could never reach. The tab sends the raw measurements to
+the server in a `recorded` field, and `providers/RecordedProvider.ts` replays
+them through the same runner: same cold-start isolation, summary, hardware fit,
+readiness score, database row and activity log as a server-measured run. Cloud
+adapters still run on the server; a visitor may supply their own Gemini/Groq
+key per request (`infrastructure/visitor-keys.ts`), and `CloudCatalog.ts` asks
+each vendor which models that key may run.
+
 ---
 
 ## Getting it running in five minutes
