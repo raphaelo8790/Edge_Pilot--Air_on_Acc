@@ -56,7 +56,11 @@ function nothingRecorded() {
     {
       success: false,
       error: 'Nothing recorded',
-      details: 'This session has no activity to share.',
+      details:
+        'This session has no activity to share. The log starts empty and ' +
+        'fills as you register a workload, check the local runtime, or run a ' +
+        'benchmark or comparison. It lives in this server\u2019s memory only, so ' +
+        'restarting the dev server clears it.',
     },
     { status: 404 }
   );

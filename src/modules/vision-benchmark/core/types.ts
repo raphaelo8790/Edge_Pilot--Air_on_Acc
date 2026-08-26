@@ -59,11 +59,65 @@ export interface PreparedVisionImage {
   processedSha256: string;
 }
 
+/**
+ * Timings the RUNTIME reports for one request, in milliseconds.
+ *
+ * These are not our stopwatch. Ollama returns them on every /api/chat reply,
+ * in nanoseconds, and they describe what happened inside the server rather
+ * than what the network and our own code added around it. Every field is
+ * nullable because a provider that does not report them (Gemini) must produce
+ * `null`, never a zero — a zero here would read as "instant".
+ *
+ * WHY THERE IS NO time-to-first-token FIELD. TTFT is the gap between the
+ * request and the first token appearing, and it can only be observed while
+ * streaming. This provider sends `stream: false`, so the first byte and the
+ * last byte arrive together and there is no first-token moment to time.
+ * `promptEvalMs` is the closest honest thing: the time the runtime spent
+ * consuming the prompt and the image before it began generating. Related, and
+ * not the same number, so it does not borrow the name.
+ */
+export interface VisionRuntimeTiming {
+  /** Total time inside the runtime, its own measurement. */
+  totalMs: number | null;
+  /** Time spent loading the model. Large here means a cold start. */
+  loadMs: number | null;
+  /** Time consuming the prompt and image before generation began. */
+  promptEvalMs: number | null;
+  /** Tokens of prompt consumed, image tokens included. */
+  promptTokens: number | null;
+  /** Time spent generating. */
+  evalMs: number | null;
+  /** Tokens generated. */
+  outputTokens: number | null;
+}
+
+/**
+ * How the model sat in memory during the run, as reported by the runtime.
+ *
+ * Deliberately a local shape rather than an import of the benchmark module's
+ * HardwareFitAssessment: the two modules stay independent, the same way
+ * http.ts is a copy rather than a shared import. The composition layer maps
+ * one to the other.
+ */
+export interface VisionHardwareFit {
+  state: string;
+  /** Bytes resident in total, and how many of those were on the GPU. */
+  residentBytes: number | null;
+  vramBytes: number | null;
+  /** Resident bytes that did not fit on the GPU. Null when unknowable. */
+  spilledBytes: number | null;
+  /** Plain sentence for a reader; never a bare number. */
+  summary: string;
+}
+
 export interface VisionProviderResponse {
   rawOutput: string;
+  /** Our wall clock, round trip. Includes network and our own overhead. */
   latencyMs: number;
   success: boolean;
   errorMessage: string | null;
+  /** Null when the provider reports no timings of its own. */
+  runtime?: VisionRuntimeTiming | null;
 }
 
 export interface VisionPredictionRecord {
@@ -75,6 +129,8 @@ export interface VisionPredictionRecord {
   latencyMs: number;
   providerSuccess: boolean;
   errorCategory: 'provider_error' | 'invalid_output' | null;
+  /** Optional so evidence written before this existed still parses. */
+  runtime?: VisionRuntimeTiming | null;
 }
 
 export interface ClassMetrics {
@@ -108,6 +164,15 @@ export interface VisionAggregateMetrics {
   p95LatencyMs: number;
   throughputSamplesPerSecond: number;
   perClass: ClassMetrics[];
+  /**
+   * Runtime-reported aggregates. All nullable and all optional: a provider
+   * that reports nothing gives null, and evidence recorded before these
+   * existed simply omits them.
+   */
+  medianPromptEvalMs?: number | null;
+  medianTokensPerSecond?: number | null;
+  outputTokensTotal?: number | null;
+  modelLoadMs?: number | null;
 }
 
 export interface VisionBenchmarkThresholds {
@@ -150,6 +215,12 @@ export interface VisionBenchmarkEvidence {
    * class the model never once predicted is precisely the interesting one.
    */
   labels?: readonly string[];
+  /**
+   * How the model sat in memory during this run. Optional so evidence written
+   * before this existed still parses; null when the provider runs on someone
+   * else's hardware or the runtime reported nothing.
+   */
+  hardwareFit?: VisionHardwareFit | null;
 }
 
 export interface VisionBenchmarkEvaluationInput {

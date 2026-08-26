@@ -30,6 +30,7 @@ jest.mock('@/modules/benchmark/infrastructure/container', () => ({
 
 // Imported after the mock is registered.
 import { GET, POST } from '@/app/api/v1/benchmarks/route';
+import { sessionLogStore } from '@/core/logging/sessionLogStore';
 
 const WORKLOAD_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '33333333-3333-4333-8333-333333333333';
@@ -292,5 +293,100 @@ describe('GET /api/v1/benchmarks', () => {
     expect(response.status).toBe(500);
 
     consoleError.mockRestore();
+  });
+});
+
+/**
+ * THE BUG THESE COVER.
+ *
+ * Until this was fixed, /api/v1/comparisons was the only route in the
+ * application that wrote to the session log. A user could register a workload,
+ * check their runtime and benchmark models all afternoon, then open the
+ * activity log and be told "Nothing recorded" — with nothing to download and
+ * nothing to share. The log was not broken; it was simply never written to.
+ *
+ * These assert the two halves of the contract that fixes it: a request that
+ * carries a session id IS recorded, and a request that does not is STILL not
+ * recorded. The second half matters as much as the first — logging is opt-in,
+ * and a fix that started logging everyone would have traded a dead feature for
+ * a privacy regression.
+ */
+describe('POST /api/v1/benchmarks — session log', () => {
+  const SESSION = 'session-abcdefgh';
+
+  function postWithSession(body: unknown, sessionId?: string): Request {
+    return new Request('http://localhost:3000/api/v1/benchmarks', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(sessionId ? { 'x-edgepilot-session': sessionId } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  afterEach(() => {
+    sessionLogStore.close(SESSION);
+  });
+
+  it('records the request and the measurement under one correlation id', async () => {
+    execute.mockResolvedValue({ ok: true, run: completedRun() });
+
+    const response = await POST(postWithSession(VALID_BODY, SESSION));
+    const payload = await response.json();
+
+    expect(payload.meta.session_logged).toBe(true);
+
+    const events = sessionLogStore.get(SESSION)!.export().events;
+
+    expect(events).toHaveLength(2);
+    expect(events[0].message).toBe('Benchmark requested');
+    expect(events[1].message).toContain('Measured llama3.2:1b');
+    // One user action, one thread through the export.
+    expect(events[0].correlationId).toBe(payload.meta.correlation_id);
+    expect(events[1].correlationId).toBe(payload.meta.correlation_id);
+  });
+
+  it('records the prompt as a digest and never as text', async () => {
+    execute.mockResolvedValue({ ok: true, run: completedRun() });
+
+    await POST(
+      postWithSession(
+        { ...VALID_BODY, prompt: 'our unreleased Q3 revenue figures' },
+        SESSION
+      )
+    );
+
+    const exported = JSON.stringify(sessionLogStore.get(SESSION)!.export());
+
+    expect(exported).not.toContain('unreleased Q3 revenue');
+    expect(exported).toContain('sha256Prefix');
+  });
+
+  it('records a refusal with the reason rather than silently', async () => {
+    execute.mockResolvedValue({
+      ok: false,
+      status: 403,
+      error: 'Cross-owner request',
+      detail: 'different users',
+    });
+
+    await POST(postWithSession(VALID_BODY, SESSION));
+
+    const events = sessionLogStore.get(SESSION)!.export().events;
+
+    expect(events[1].level).toBe('warn');
+    expect(events[1].message).toContain('Cross-owner request');
+  });
+
+  it('records nothing at all without a session header', async () => {
+    execute.mockResolvedValue({ ok: true, run: completedRun() });
+
+    const response = await POST(postRequest(VALID_BODY));
+    const payload = await response.json();
+
+    expect(payload.meta.session_logged).toBe(false);
+    // Not an empty log — no log. Nothing was opened on this visitor's behalf.
+    expect(sessionLogStore.count()).toBe(0);
   });
 });

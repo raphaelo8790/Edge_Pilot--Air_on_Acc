@@ -102,7 +102,54 @@ describe('Ollama vision provider', () => {
       latencyMs: 25,
       success: true,
       errorMessage: null,
+      // This mock sends no timings, and every field is null rather than 0.
+      // A zero here would read as "instant" instead of "not reported".
+      runtime: {
+        totalMs: null,
+        loadMs: null,
+        promptEvalMs: null,
+        promptTokens: null,
+        evalMs: null,
+        outputTokens: null,
+      },
     });
+  });
+
+  test('converts the runtime timings Ollama reports from nanoseconds', async () => {
+    // A real /api/chat reply carries these even with stream: false. They were
+    // being parsed away and discarded. The conversion is the part worth
+    // pinning: an off-by-1e6 here would look plausible and be wrong by a
+    // thousand times.
+    const provider = new OllamaVisionProvider({
+      model: 'llava:latest',
+      fetchImplementation: async () =>
+        new Response(
+          JSON.stringify({
+            message: { content: 'hardhat' },
+            total_duration: 1_500_000_000,
+            load_duration: 300_000_000,
+            prompt_eval_count: 614,
+            prompt_eval_duration: 900_000_000,
+            eval_count: 7,
+            eval_duration: 250_000_000,
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        ),
+      clock: sequenceClock([100, 125]),
+    });
+
+    const response = await provider.classify(createRequest());
+
+    expect(response.runtime).toEqual({
+      totalMs: 1500,
+      loadMs: 300,
+      promptEvalMs: 900,
+      promptTokens: 614,
+      evalMs: 250,
+      outputTokens: 7,
+    });
+    // Our own wall clock stays separate from what the runtime reported.
+    expect(response.latencyMs).toBe(25);
   });
 
   test('turns an Ollama HTTP error into structured failure', async () => {

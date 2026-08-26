@@ -386,4 +386,38 @@ export function shareSessionLog(note?: string) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Database health
+// ---------------------------------------------------------------------------
+
+export interface DatabaseHealth {
+  connected: boolean;
+  configured: boolean;
+  /** Host and database NAME only, and withheld entirely in production. */
+  host: string | null;
+  database: string | null;
+  pooled: boolean | null;
+  ssl: boolean | null;
+  round_trip_ms: number | null;
+  migrations: {
+    applied: number;
+    pending_rollback: number;
+    latest: string | null;
+    latest_at: string | null;
+  } | null;
+  /** Counts only. Never rows. Null when the tables could not be read. */
+  rows: Record<string, number> | null;
+}
+
+/**
+ * Asks the server whether it can actually reach its database.
+ *
+ * The failure case is not thrown away: a 503 here still carries the diagnosis
+ * in `data`, which is the whole point of the endpoint, so the caller gets the
+ * failure shape rather than a bare error string.
+ */
+export function getDatabaseHealth() {
+  return call<DatabaseHealth>("/health/database");
+}
+
 export type { BenchmarkRun, BenchmarkRequest, BenchmarkRunOutcome, ComparisonReport };

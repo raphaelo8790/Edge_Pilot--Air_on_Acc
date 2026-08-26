@@ -53,6 +53,7 @@ drop every session log mid-use.
 
 These folders point here. Each link below resolves in both directions.
 
+- [`src/components/history/`](../../components/history/FOLDER.md)
 - [`src/core/`](../FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

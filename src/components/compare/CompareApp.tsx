@@ -14,6 +14,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { ArcadeNavLinks } from "@/components/ArcadeNav";
+import { addComparisonRun } from "@/components/vision/runHistory";
 import { PaletteToggle } from "@/components/PaletteToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -127,11 +128,22 @@ export function CompareApp() {
     !Number.isInteger(iterations) || iterations < 1 || iterations > 20
       ? "Iterations must be a whole number between 1 and 20."
       : null;
+  const entrantKeys = entrants.map(
+    (e) => `${e.provider.trim()}::${e.model.trim()}`,
+  );
+  // Mirrors the server rule, never replaces it. Same model twice collides in
+  // the report's label-keyed tally, so it is refused rather than rendered.
+  const hasDuplicate =
+    new Set(entrantKeys).size !== entrantKeys.length &&
+    entrants.every((e) => e.provider.trim() !== "" && e.model.trim() !== "");
+
   const entrantError = entrants.some(
     (e) => e.provider.trim() === "" || e.model.trim() === "",
   )
     ? "Every entrant needs a provider and a model."
-    : null;
+    : hasDuplicate
+      ? "Each entrant must be a different model. The same model twice measures run-to-run variance, not a difference between models."
+      : null;
 
   const setEntrant = (index: number, patch: Partial<EntrantForm>) => {
     setEntrants((all) =>
@@ -190,6 +202,9 @@ export function CompareApp() {
 
     if (res.ok) {
       setResult(res.data);
+      // The costliest run in the app, and until now the only one that was
+      // kept nowhere. Stored in this browser; never uploaded.
+      addComparisonRun(res.data);
       return;
     }
     // 422 "Comparison refused" ships the plan inside data so the refusal can
@@ -218,6 +233,7 @@ export function CompareApp() {
               { href: "/dashboard", label: "dashboard" },
               { href: "/evidence", label: "evidence" },
               { href: "/evaluation", label: "matrix" },
+              { href: "/history", label: "history" },
             ]}
           />
         </div>

@@ -22,10 +22,31 @@ interface Props {
   taskLabel: string;
   /** Installed models the runtime positively identified as vision-capable. */
   visionModels: LocalModel[];
+  /** Whatever was picked on the previous step, if anything. */
+  selectedModel?: string;
   onBack: () => void;
 }
 
-export function VisionHandoff({ taskLabel, visionModels, onBack }: Props) {
+/**
+ * The vision page preselects whatever tag arrives here, so a model chosen on
+ * the dashboard does not have to be chosen again on arrival. Encoded because
+ * a tag contains a colon.
+ */
+function visionHref(model: string | undefined): string {
+  return model
+    ? `/vision-benchmark?model=${encodeURIComponent(model)}`
+    : "/vision-benchmark";
+}
+
+export function VisionHandoff({
+  taskLabel,
+  visionModels,
+  selectedModel,
+  onBack,
+}: Props) {
+  // Fall back to the first vision model the runtime reported: arriving with
+  // something sensible selected beats arriving with an empty dropdown.
+  const carried = selectedModel || visionModels[0]?.name;
   return (
     <section className="card" aria-labelledby="vision-handoff">
       <h2 id="vision-handoff">3 · Run — this is an image workload</h2>
@@ -46,7 +67,7 @@ export function VisionHandoff({ taskLabel, visionModels, onBack }: Props) {
         <div className="callout" role="note">
           No vision model is installed. Pull one first — for example{" "}
           <code>ollama pull llava</code> — then run{" "}
-          <code>npm run vision:run:ollama -- --model=llava</code>.
+          <code>npm run vision:run:ollama -- --model=llava:latest</code>.
         </div>
       ) : (
         <div className="callout callout-ok" role="note">
@@ -57,13 +78,15 @@ export function VisionHandoff({ taskLabel, visionModels, onBack }: Props) {
           Run the benchmark against{" "}
           <code>
             npm run vision:run:ollama -- --model=
-            {visionModels[0].name.split(":")[0]}
+            {visionModels[0].name}
           </code>{" "}
-          to record live evidence, then compare it on the vision dashboard.
+          to record live evidence — or run it from the vision dashboard directly.
           <ul className="list" style={{ marginTop: 6 }}>
             {visionModels.map((m) => (
               <li key={m.name}>
-                <code>{m.name}</code>
+                <Link href={visionHref(m.name)}>
+                  <code>{m.name}</code>
+                </Link>
                 {m.parameter_size ? ` · ${m.parameter_size}` : ""} —{" "}
                 <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                   {m.modality_reason}
@@ -78,8 +101,10 @@ export function VisionHandoff({ taskLabel, visionModels, onBack }: Props) {
         <button className="btn" onClick={onBack}>
           ← Back
         </button>
-        <Link className="btn btn-primary" href="/vision-benchmark">
-          Open the vision benchmark →
+        <Link className="btn btn-primary" href={visionHref(carried)}>
+          {carried
+            ? `Open the vision benchmark with ${carried} →`
+            : "Open the vision benchmark →"}
         </Link>
       </div>
     </section>

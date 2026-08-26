@@ -116,6 +116,22 @@
     0 0 60px -20px rgba(216, 35, 29, 0.16);
 }
 
+/* Embedded use.
+
+   .epd is the page ROOT on /dashboard and /evidence, and min-height: 100vh is
+   what paints its background down the whole viewport there.
+
+   When .epd is used only to scope card styling around ONE SECTION of another
+   page, that min-height comes along and forces an empty viewport per wrapper.
+   The vision page had two such wrappers, so it carried two screens of nothing
+   between its cards while the cards themselves were correctly sized.
+
+   Add .epd-embedded alongside .epd for section-level scoping. */
+.epd.epd-embedded {
+  min-height: 0;
+  background: transparent;
+}
+
 .epd *,
 .epd *::before,
 .epd *::after {

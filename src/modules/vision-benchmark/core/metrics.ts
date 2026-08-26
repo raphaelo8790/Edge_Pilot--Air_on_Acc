@@ -97,6 +97,72 @@ function calculateClassMetrics(
   };
 }
 
+
+/**
+ * Median of whatever the runtime actually reported, or null.
+ *
+ * Null when nothing reported, never 0. A provider that returns no timings and
+ * a model that answered instantly must not produce the same number — that is
+ * the same rule the benchmark layer applies to every nullable aggregate.
+ */
+function medianOrNull(values: number[]): number | null {
+  return values.length === 0 ? null : median(values);
+}
+
+/**
+ * Aggregates of what the RUNTIME reported, not of our own clock.
+ *
+ * Only successful records contribute: a failed request's timings describe a
+ * failure, not the model. Every result is null when nothing reported it —
+ * never 0, which would read as "instant" rather than "not measured".
+ */
+function runtimeAggregates(records: VisionPredictionRecord[]): {
+  medianPromptEvalMs: number | null;
+  medianTokensPerSecond: number | null;
+  outputTokensTotal: number | null;
+  modelLoadMs: number | null;
+} {
+  const runtimes = records
+    .filter((record) => record.providerSuccess)
+    .map((record) => record.runtime)
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+  const promptEval = runtimes
+    .map((entry) => entry.promptEvalMs)
+    .filter((value): value is number => typeof value === 'number');
+
+  const tokensPerSecond = runtimes
+    .map((entry) =>
+      typeof entry.outputTokens === 'number' &&
+      typeof entry.evalMs === 'number' &&
+      entry.evalMs > 0
+        ? entry.outputTokens / (entry.evalMs / 1000)
+        : null
+    )
+    .filter((value): value is number => typeof value === 'number');
+
+  const outputTokens = runtimes
+    .map((entry) => entry.outputTokens)
+    .filter((value): value is number => typeof value === 'number');
+
+  const loads = runtimes
+    .map((entry) => entry.loadMs)
+    .filter((value): value is number => typeof value === 'number');
+
+  return {
+    medianPromptEvalMs: medianOrNull(promptEval),
+    medianTokensPerSecond: medianOrNull(tokensPerSecond),
+    outputTokensTotal:
+      outputTokens.length === 0
+        ? null
+        : outputTokens.reduce((total, value) => total + value, 0),
+    // The largest load seen. The warm-up is discarded before these records
+    // exist, so anything big here means the runtime evicted the model
+    // mid-run and paid to read it back off disk.
+    modelLoadMs: loads.length === 0 ? null : Math.max(...loads),
+  };
+}
+
 export function calculateVisionMetrics(
   records: VisionPredictionRecord[],
   labels: readonly string[] = VISION_LABELS
@@ -167,5 +233,6 @@ export function calculateVisionMetrics(
         ? 0
         : successfulRequests / (totalMeasuredLatencyMs / 1000),
     perClass,
+    ...runtimeAggregates(records),
   };
 }

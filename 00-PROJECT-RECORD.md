@@ -425,7 +425,7 @@ exist only there.
 | `src/components/dashboard/InstalledModels.tsx`, `VisionHandoff.tsx` | Always-visible model panel with per-step filtering; handoff into the vision dashboard |
 | `src/components/vision/DatasetUpload.tsx` and the two browser vision adapters | Bring-your-own dataset that never leaves the machine |
 | `scripts/db/`, `scripts/dev/`, `scripts/evaluation/` | Shared-database guards, local helpers, the ten-case matrix |
-| `tests/core/`, plus 7 new benchmark test files | 279 tests across 25 suites, from 259 |
+| `tests/core/`, `tests/evaluation/`, plus new benchmark and dashboard suites | 322 tests across 29 suites, from 259 |
 | 4 Prisma migrations | Nullable hardware fit and shared findings; optional email and session owner; drop devices; warm-up iteration |
 | `AI_USAGE.md` | Required submission item, one section per work package |
 
@@ -555,8 +555,10 @@ Listed so nobody has to discover it in a review.
   acceptance criterion open.
 - **`quality_score` exists nowhere**, and is a required structured field.
 - **No public URL.** The Docker image builds; nothing is hosted.
-- **No UI** for `comparisons`, `session-log` or `session-log/share`, though all
-  three endpoints work.
+- ~~**No UI** for `comparisons`, `session-log` or `session-log/share`.~~
+  **Closed.** `/compare` drives the comparison engine, `/history` drives the
+  session log and its consent-gated share, and `/evaluation` renders the
+  ten-case matrix. All three endpoints had working backends and no way in.
 - **No adversarial or injection tests in the Jest suite.** The ten-case matrix
   covers the artefact side; the unit suite does not.
 - **Two deliberate conflicts with the specification**, recorded rather than
@@ -573,12 +575,62 @@ Listed so nobody has to discover it in a review.
 
 ---
 
+## 6a. What changed after this record was written
+
+The record above describes the state at commit `b13af6e`. Three further passes
+landed on top of it, and the parts that change what section 6 claims are here
+rather than rewritten into it - a record that quietly edits itself is not one.
+
+**The interface arrived.** A UI/UX pass added `/compare`, `/evaluation`,
+theming and an arcade navigation, and closed the "endpoint works, nothing calls
+it" gap for three endpoints at once. Its only reach into measurement code was
+`OllamaCatalog`, which gained a per-model `resident` flag read from `/api/ps` -
+null when the call fails, never conflated with "not loaded".
+
+**The vision workload became runnable from the page.** `/vision-benchmark` had
+a server path and a browser path for your own images, and no button for the
+dataset the project ships with. It is a server action, off by default behind
+`VISION_BENCHMARK_IN_APP`, and it writes nothing server-side - the evidence is
+returned for the browser to keep, so `evidence/vision-benchmark/` still means
+one thing: the reference measurements committed with the project.
+
+**Vision runs gained the metrics the text benchmark had.** Hardware fit, read
+by the same residency probe and scored by the same assessor; and the timings
+Ollama already returned on every reply and the provider was discarding -
+prompt-eval time, token counts, tokens per second, model load. Deliberately
+**no TTFT**: that requires streaming, the vision provider sends
+`stream: false`, and there is no first-token moment to observe. `promptEvalMs`
+is the closest honest quantity and does not borrow the name.
+
+**Every run is kept.** `/history` shows text and code runs, comparisons and
+vision runs together, in the browser rather than on the server. Before it, the
+dashboard dropped a completed run on navigation and a comparison - the most
+expensive operation here - survived nowhere at all.
+
+**One correctness bug found and fixed.** The comparison accepted the same model
+twice. Entrants are labelled `provider + model` and the report's tally is keyed
+by that label, so duplicates collided onto one key: it would have declared a
+winner between a model and itself, decided by whichever run happened to be
+faster. Refused in `planComparison`, mirrored client-side, pinned by two tests -
+one that it refuses duplicates, one that `llama3.2:1b` against `llama3.2:3b`
+still runs, because the rule is about identity and not similarity.
+
+**Licensing changed.** This work is AGPL-3.0-or-later; the imported baseline
+keeps its MIT notice, which is a licence obligation rather than a statement
+about who wrote what.
+
+Still open from section 6: no cloud provider path has executed, the privacy
+catalogue is still `unverified`, `official_source` and `quality_score` remain,
+there is no public URL, and `docs/internal/database.md` is still stale.
+
+---
+
 ## 7. Verification state at the time of writing
 
 | Check | Command | Result |
 |---|---|---|
 | Lint | `npm run lint` | 0 problems |
-| Tests | `npm test` | 279 passed, 25 suites |
+| Tests | `npm test` | 322 passed, 29 suites |
 | Build | `npm run build` | clean, 14 routes |
 | Container | `docker build -t edgepilot-ai:test .` | succeeded, 154.8 s |
 | Evaluation matrix | `npm run eval:matrix` | 10/10 cases behaved as documented |

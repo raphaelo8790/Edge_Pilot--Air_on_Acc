@@ -40,6 +40,9 @@ to carry the dataset upload.
 | [`dashboard/`](dashboard/FOLDER.md) | `/dashboard` - the benchmark journey |
 | [`vision-benchmark/`](vision-benchmark/FOLDER.md) | `/vision-benchmark` |
 | [`evidence/`](evidence/FOLDER.md) | `/evidence` - artefacts, rendered |
+| [`compare/`](compare/FOLDER.md) | `/compare` - two to four models against each other |
+| [`evaluation/`](evaluation/FOLDER.md) | `/evaluation` - the ten-case matrix, rendered |
+| [`history/`](history/FOLDER.md) | `/history` - this session's runs, download and share |
 
 ## Connected folders
 

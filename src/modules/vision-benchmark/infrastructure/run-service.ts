@@ -10,6 +10,8 @@ import {
   loadVisionDatasetManifest,
 } from './manifest-loader';
 import { OllamaVisionProvider } from './ollama-provider';
+import { OllamaResidencyProbe } from '@/modules/benchmark/infrastructure/OllamaResidencyProbe';
+import { assessHardwareFit } from '@/modules/benchmark/core/services/HardwareFitAssessor';
 import { VisionFetch } from './http';
 
 export interface RunVisionBenchmarkOptions {
@@ -54,7 +56,7 @@ export async function runVisionBenchmarkRequest(
           fetchImplementation: options.fetchImplementation,
         });
 
-  return executeVisionBenchmark({
+  const evidence = await executeVisionBenchmark({
     provider,
     imageProcessor,
     samples: loadedManifest.manifest.samples,
@@ -76,4 +78,45 @@ export async function runVisionBenchmarkRequest(
       )}.`,
     ],
   });
+
+  // Residency is read straight after the run, while the model is still loaded:
+  // Ollama unloads once its keep-alive expires and /api/ps then reports
+  // nothing, which would turn a real measurement into "not observed".
+  //
+  // Only for the local provider. A cloud model runs on someone else's
+  // hardware, and reporting a fit for it would be inventing a fact.
+  if (request.provider !== 'ollama') {
+    return { ...evidence, hardwareFit: null };
+  }
+
+  try {
+    const probe = new OllamaResidencyProbe({
+      host: environment.OLLAMA_HOST ?? 'http://localhost:11434',
+    });
+    const observation = await probe.observe(request.model);
+    // 'local' because we only reach here for the ollama provider; the cloud
+    // branch returned null above rather than asking about someone else's GPU.
+    const fit = assessHardwareFit('local', observation);
+
+    const resident = observation.residentBytes;
+    const vram = observation.vramBytes;
+
+    return {
+      ...evidence,
+      hardwareFit: {
+        state: fit.state,
+        residentBytes: resident,
+        vramBytes: vram,
+        spilledBytes:
+          resident === null || vram === null
+            ? null
+            : Math.max(0, resident - vram),
+        summary: fit.summary,
+      },
+    };
+  } catch {
+    // A failed probe must not lose a completed benchmark. The run happened;
+    // we simply could not see how it sat in memory.
+    return { ...evidence, hardwareFit: null };
+  }
 }

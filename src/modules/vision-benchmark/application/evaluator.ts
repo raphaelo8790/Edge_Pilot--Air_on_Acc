@@ -112,6 +112,9 @@ export function evaluateVisionBenchmark(
         normalizedLabel,
         latencyMs: response.latencyMs,
         providerSuccess: response.success,
+        // Null, not omitted, when the provider reported nothing: a reader
+        // must be able to tell "not reported" from "not yet a field".
+        runtime: response.runtime ?? null,
         errorCategory: classifyError(
           response.success,
           normalizedLabel

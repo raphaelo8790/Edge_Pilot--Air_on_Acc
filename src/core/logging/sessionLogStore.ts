@@ -44,12 +44,36 @@ const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 export function logForRequest(request: Request): SessionLog | null {
   const sessionId = request.headers.get(SESSION_HEADER)?.trim();
 
-  if (!sessionId || !SESSION_ID_PATTERN.test(sessionId)) {
-    return null;
-  }
-
   const includePromptText =
     request.headers.get(PROMPT_TEXT_HEADER)?.trim().toLowerCase() === 'true';
 
-  return sessionLogStore.open(sessionId, { includePromptText });
+  return logForSession(sessionId, { includePromptText });
+}
+
+/**
+ * The same resolution, for callers that have a session id but not a Request.
+ *
+ * Server actions are the reason this exists. Next.js exposes them as its own
+ * POST endpoint, and the client component calling one is not going through
+ * the typed API client, so no `x-edgepilot-session` header is attached. The
+ * id is therefore passed as an ordinary argument - which keeps the same rule
+ * intact either way: no id, no log, and nothing is recorded anonymously.
+ *
+ * The id is still validated here rather than at the call site, because a
+ * value that arrives as a function argument is no more trustworthy than one
+ * that arrives as a header.
+ */
+export function logForSession(
+  sessionId: string | null | undefined,
+  options: { includePromptText?: boolean } = {}
+): SessionLog | null {
+  const id = sessionId?.trim();
+
+  if (!id || !SESSION_ID_PATTERN.test(id)) {
+    return null;
+  }
+
+  return sessionLogStore.open(id, {
+    includePromptText: options.includePromptText ?? false,
+  });
 }

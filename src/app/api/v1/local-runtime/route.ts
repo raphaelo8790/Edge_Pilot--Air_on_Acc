@@ -14,6 +14,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { logForRequest } from '@/core/logging/sessionLogStore';
 import { OllamaCatalog } from '@/modules/benchmark/infrastructure/OllamaCatalog';
 import { classifyModality } from '@/modules/benchmark/core/services/ModelModality';
 import {
@@ -23,12 +24,38 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Takes the request only to resolve the session log. Whether the local
+  // runtime answered - and what it was holding when it did - is the context
+  // that makes a later measurement readable, so it belongs in the record.
+  const log = logForRequest(request);
+
   try {
     assertServerSide('local-runtime route');
 
     const config = loadBenchmarkConfig();
     const status = await new OllamaCatalog({ host: config.ollamaHost }).status();
+
+    log?.record(
+      status.ok ? 'info' : 'warn',
+      'runtime',
+      status.ok
+        ? `Local runtime reachable, ${status.models.length} models installed`
+        : `Local runtime not reachable: ${status.message}`,
+      {
+        provider: 'ollama',
+        state: status.state,
+        // The host is configuration, not a credential: it is a LAN address or
+        // localhost, and knowing which one was asked is half of any diagnosis.
+        host: status.host,
+        version: status.version,
+        model_count: status.models.length,
+        resident_models: status.models
+          .filter((model) => model.resident === true)
+          .map((model) => model.name),
+        remedy: status.ok ? null : status.remedy,
+      }
+    );
 
     return NextResponse.json({
       success: true,
@@ -66,6 +93,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Local runtime status error:', error);
+
+    log?.record('error', 'runtime', 'Local runtime check failed', {
+      message: error instanceof Error ? error.message : 'unknown',
+    });
 
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

@@ -4,7 +4,7 @@
 
 ## What this folder is
 
-279 tests across 25 suites, mirroring `src/` one level down. Nothing here
+322 tests across 29 suites, mirroring `src/` one level down. Nothing here
 touches a network, a real timer, a real model or a real database - every
 adapter takes its `fetch` and its clock by injection, which is what makes the
 suite deterministic. A benchmark test that depended on real latency would be a
@@ -12,7 +12,7 @@ flaky test that also proved nothing.
 
 ## What happened here
 
-Eight files were added and six changed, taking the suite from 259 tests to 279.
+Eight files were added and six changed, taking the suite from 259 tests to 322.
 `tests/core/` is new; so are the suites for hardware fit, task compatibility,
 privacy assessment, comparison, comparison runs, the Ollama catalogue and the
 egress warning.
@@ -42,6 +42,7 @@ rather than consolidated.
 | [`core/`](core/FOLDER.md) | The session log |
 | [`dashboard/`](dashboard/FOLDER.md) | The display helpers that enforce null-honesty |
 | [`vision-benchmark/`](vision-benchmark/FOLDER.md) | 5 files - the vision module end to end |
+| [`evaluation/`](evaluation/FOLDER.md) | The ten-case artefact's shape, including that no category can vanish silently |
 
 ## Connected folders
 

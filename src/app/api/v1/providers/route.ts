@@ -17,6 +17,7 @@ import {
   benchmarkConfigWarnings,
   benchmarkRegistry,
 } from '@/modules/benchmark/infrastructure/container';
+import { logForRequest } from '@/core/logging/sessionLogStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,10 @@ interface ProviderRow {
   isActive: boolean;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Takes the request only to resolve the session log.
+  const log = logForRequest(request);
+
   try {
     const availability = benchmarkRegistry().availability();
     const warnings = benchmarkConfigWarnings();
@@ -68,6 +72,26 @@ export async function GET() {
       };
     });
 
+    // Deliberately NOT recorded on every read. The dashboard calls this on
+    // mount, and a log full of "read the provider list" would bury the four
+    // lines somebody actually exported it for. Only the states that explain a
+    // later failure are written: a provider that cannot run, or a catalogue
+    // that could not be read.
+    if (warnings.length > 0 || !databaseAvailable) {
+      log?.record('warn', 'config', 'Provider configuration is incomplete', {
+        database_available: databaseAvailable,
+        // Warnings name which environment variable is missing, never its
+        // value - and `redact` would strip it by key name regardless.
+        configuration_warnings: warnings,
+        unconfigured: availability
+          .filter((provider) => !provider.isConfigured)
+          .map((provider) => ({
+            name: provider.name,
+            reason: provider.reason,
+          })),
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data,
@@ -82,6 +106,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Get providers error:', error);
+
+    log?.record('error', 'config', 'Provider list could not be built', {
+      message: error instanceof Error ? error.message : 'unknown',
+    });
 
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

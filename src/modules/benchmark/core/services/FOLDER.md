@@ -59,6 +59,8 @@ These folders point here. Each link below resolves in both directions.
 - [`src/app/api/v1/comparisons/`](../../../../app/api/v1/comparisons/FOLDER.md)
 - [`src/app/api/v1/readiness/`](../../../../app/api/v1/readiness/FOLDER.md)
 - `src/app/api/v1/readiness/[id]/` ([FOLDER.md](../../../../app/api/v1/readiness/%5Bid%5D/FOLDER.md))
+- [`src/app/compare/`](../../../../app/compare/FOLDER.md)
+- [`src/components/compare/`](../../../../components/compare/FOLDER.md)
 - [`src/modules/benchmark/core/`](../FOLDER.md)
 - [`src/modules/benchmark/core/entities/`](../entities/FOLDER.md)
 

@@ -47,7 +47,11 @@ export async function GET(request: Request) {
         success: false,
         error: 'Nothing recorded',
         details:
-          'No activity has been logged for this session. Logs are kept in memory only and are discarded when the server restarts or after a period of inactivity.',
+          'The log starts empty and fills as you use the application \u2014 ' +
+          'registering a workload, checking the local runtime, running a ' +
+          'benchmark, a comparison or a vision run all write to it. It is kept ' +
+          'in this server\u2019s memory only, so it is discarded when the server ' +
+          'restarts or after a period of inactivity.',
       },
       { status: 404 }
     );

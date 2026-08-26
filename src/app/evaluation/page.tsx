@@ -95,6 +95,7 @@ export default async function EvaluationPage() {
               { href: '/', label: 'home' },
               { href: '/evidence', label: 'evidence' },
               { href: '/dashboard', label: 'dashboard' },
+              { href: '/history', label: 'history' },
             ]}
           />
         </div>

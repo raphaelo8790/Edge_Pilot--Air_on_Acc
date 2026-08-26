@@ -23,7 +23,9 @@ reach the server.
 | Subfolder | What it holds |
 |---|---|
 | [`dashboard/`](dashboard/FOLDER.md) | 11 files - the benchmark journey |
-| [`vision/`](vision/FOLDER.md) | The bring-your-own-dataset upload |
+| [`vision/`](vision/FOLDER.md) | Both vision run panels, the browser run store, and the threshold note |
+| [`compare/`](compare/FOLDER.md) | The comparison application - the UI the comparison engine never had |
+| [`history/`](history/FOLDER.md) | Every run this session produced, and what may leave the machine |
 
 ## Connected folders
 

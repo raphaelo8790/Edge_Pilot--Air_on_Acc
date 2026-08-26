@@ -46,7 +46,9 @@ at. Case 9 exists to assert a different rule: a missing hardware fit stays
 These folders point here. Each link below resolves in both directions.
 
 - [`evidence/`](../FOLDER.md)
+- [`src/app/evaluation/`](../../src/app/evaluation/FOLDER.md)
 - [`src/app/evidence/`](../../src/app/evidence/FOLDER.md)
 - [`tests/dashboard/`](../../tests/dashboard/FOLDER.md)
+- [`tests/evaluation/`](../../tests/evaluation/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

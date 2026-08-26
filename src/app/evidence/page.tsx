@@ -211,6 +211,7 @@ export default async function EvidencePage() {
               { href: '/', label: 'home' },
               { href: '/dashboard', label: 'dashboard' },
               { href: '/compare', label: 'compare' },
+              { href: '/history', label: 'history' },
             ]}
           />
         </div>

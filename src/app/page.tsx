@@ -112,6 +112,7 @@ export default function Home() {
                 { href: '/compare', label: 'Compare' },
                 { href: '/vision-benchmark', label: 'Vision' },
                 { href: '/evidence', label: 'Evidence' },
+                { href: '/history', label: 'History' },
                 { href: '/evaluation', label: 'Matrix' },
               ]}
             />

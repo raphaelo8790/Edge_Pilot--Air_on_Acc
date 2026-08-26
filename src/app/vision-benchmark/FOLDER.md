@@ -22,7 +22,9 @@ posting files to an endpoint.
 
 | File | What it is |
 |---|---|
-| `page.tsx` | 245 lines. The workload description, the results view, and the mount point for the dataset upload |
+| `page.tsx` | The workload description, the reference table, and the mount points for both run panels |
+| `actions.ts` | The server action that runs the built-in dataset. Builds the request exactly as the CLI does - same workload id, prompt and prompt version - so a run started here is indistinguishable from one started from a terminal. Writes nothing server-side; the evidence is returned for the browser to keep |
+| `types.ts` | The action's result shape. Separate because a file marked `'use server'` may only export async functions - exporting an interface from one is a build error |
 
 ## Connected folders
 

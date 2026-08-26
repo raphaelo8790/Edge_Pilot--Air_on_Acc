@@ -43,6 +43,7 @@ There is **no UI for this endpoint yet**.
 These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/`](../FOLDER.md)
+- [`src/app/history/`](../../../history/FOLDER.md)
 - [`src/core/`](../../../../core/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

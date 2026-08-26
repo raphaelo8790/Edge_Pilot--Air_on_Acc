@@ -24,6 +24,7 @@ import {
   resolveOwnerId,
   sessionIdOf,
 } from '@/lib/sessionOwner';
+import { logForRequest } from '@/core/logging/sessionLogStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,11 @@ export async function POST(request: Request) {
   if (sessionId === null) {
     return missingSession();
   }
+
+  // Registering a workload is the first thing a user does, and it is what
+  // every later benchmark_id points back at. A log that skipped it would
+  // start mid-story.
+  const log = logForRequest(request);
 
   let validatedData;
 
@@ -81,6 +87,16 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
+    log?.record('info', 'config', 'Workload registered', {
+      workload_id: created.id,
+      task_type: validatedData.task_type,
+      input_format: validatedData.input_format,
+      output_format: validatedData.output_format,
+      // Constraint VALUES are the user's own requirements, not a credential,
+      // and they are what makes a later verdict legible. Recorded as given.
+      constraints: validatedData.constraints,
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Workload created',
@@ -90,6 +106,11 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    log?.record('error', 'config', 'Workload could not be saved', {
+      task_type: validatedData.task_type,
+      reason: 'The workloads table could not be reached.',
+    });
+
     return databaseUnavailable(error);
   }
 }

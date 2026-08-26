@@ -55,6 +55,36 @@ export interface ComparisonPlan {
 }
 
 export function planComparison(entrants: ComparisonEntrant[]): ComparisonPlan {
+  // An entrant must be distinguishable from the others.
+  //
+  // Not a nicety: entrants are labelled `provider + model`, and the report's
+  // tally is a Record keyed by that label. Two identical entrants collide onto
+  // one key, so the comparison would silently merge them and then declare a
+  // winner between a model and itself — decided by whichever of the two runs
+  // happened to be faster, which is noise wearing a verdict's clothes.
+  //
+  // Running one model twice to measure run-to-run variance is a legitimate
+  // technique. It is a different question from "which of these is better", and
+  // it needs a presentation that does not name a winner.
+  const keys = entrants.map((entrant) => `${entrant.provider}::${entrant.model}`);
+
+  if (new Set(keys).size !== keys.length) {
+    return {
+      runnable: false,
+      refusal:
+        'The same model was entered more than once. Comparing a model with ' +
+        'itself measures run-to-run variance, not a difference between models.',
+      mode: 'sequential',
+      modeReason: 'Not applicable: the comparison was refused.',
+      modality: null,
+      entrants: entrants.map((entrant) => ({
+        ...entrant,
+        verdict: classifyModality(entrant.model, entrant.families ?? []),
+      })),
+      caveats: [],
+    };
+  }
+
   const classified = entrants.map((entrant) => ({
     ...entrant,
     verdict: classifyModality(entrant.model, entrant.families ?? []),

@@ -4,7 +4,9 @@
 
 ## What this folder is
 
-One component, and one strict rule: **the images never leave the machine.**
+Four files. One component takes your own images and never lets them leave the
+machine; another runs the dataset the project ships with; the other two are
+the store behind them and the note that says what "passed" means.
 
 ## What happened here
 
@@ -38,6 +40,9 @@ Four things had to be got right, and three of them were got wrong first:
 
 | File | What it is |
 |---|---|
+| `RunBuiltInDataset.tsx` | Runs the shipped 21-image dataset from the page and shows the result as a table, with the cell that missed its threshold highlighted. Until it existed, measuring the reference dataset needed a terminal |
+| `runHistory.ts` | Every run this browser has made - vision, text and code, and comparisons - each capped at 20. Every access is wrapped, because `localStorage` throws outright in some privacy modes rather than returning null |
+| `ThresholdNote.tsx` | States the gate: accuracy, macro F1, invalid-output and success-rate bars, rendered from `DEFAULT_VISION_THRESHOLDS` rather than typed in, so the copy cannot drift from the rule the evaluator applies |
 | `DatasetUpload.tsx` | 403 lines. Folder-per-class picker, `labelOf`, the four blocking declarations, prompt construction from the dataset's own labels, and evidence JSON download |
 
 ## Connected folders
@@ -57,7 +62,10 @@ Four things had to be got right, and three of them were got wrong first:
 These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/vision-benchmarks/`](../../app/api/v1/vision-benchmarks/FOLDER.md)
+- [`src/app/history/`](../../app/history/FOLDER.md)
 - [`src/components/`](../FOLDER.md)
+- [`src/components/compare/`](../compare/FOLDER.md)
+- [`src/components/history/`](../history/FOLDER.md)
 - [`src/modules/vision-benchmark/`](../../modules/vision-benchmark/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

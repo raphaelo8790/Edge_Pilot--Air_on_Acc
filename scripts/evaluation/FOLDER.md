@@ -48,5 +48,7 @@ with.
 These folders point here. Each link below resolves in both directions.
 
 - [`scripts/`](../FOLDER.md)
+- [`src/app/evaluation/`](../../src/app/evaluation/FOLDER.md)
+- [`tests/evaluation/`](../../tests/evaluation/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

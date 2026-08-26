@@ -45,6 +45,8 @@ dashboard calls it.
 These folders point here. Each link below resolves in both directions.
 
 - [`src/app/api/v1/`](../FOLDER.md)
+- [`src/app/compare/`](../../../compare/FOLDER.md)
+- [`src/components/compare/`](../../../../components/compare/FOLDER.md)
 - [`src/modules/benchmark/`](../../../../modules/benchmark/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

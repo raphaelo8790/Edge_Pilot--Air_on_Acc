@@ -117,6 +117,30 @@ export const VisionBenchmarkThresholdsSchema = z.object({
   minimumSuccessfulRequestRate: RateSchema,
 });
 
+const NullableNonNegative = NonNegativeFiniteNumberSchema.nullable();
+
+/**
+ * Runtime-reported timings. Every field nullable, the whole block optional:
+ * the three evidence files committed before this existed must keep parsing,
+ * and a provider that reports nothing must record null rather than zero.
+ */
+export const VisionRuntimeTimingSchema = z.object({
+  totalMs: NullableNonNegative,
+  loadMs: NullableNonNegative,
+  promptEvalMs: NullableNonNegative,
+  promptTokens: z.number().int().nonnegative().nullable(),
+  evalMs: NullableNonNegative,
+  outputTokens: z.number().int().nonnegative().nullable(),
+});
+
+export const VisionHardwareFitSchema = z.object({
+  state: z.string().min(1),
+  residentBytes: z.number().nonnegative().nullable(),
+  vramBytes: z.number().nonnegative().nullable(),
+  spilledBytes: z.number().nonnegative().nullable(),
+  summary: z.string().min(1),
+});
+
 export const VisionPredictionRecordSchema = z.object({
   sampleId: z.string().min(1),
   // Dataset-defined. Was z.enum(VISION_LABELS), which made every dataset a
@@ -129,6 +153,7 @@ export const VisionPredictionRecordSchema = z.object({
   errorCategory: z
     .enum(['provider_error', 'invalid_output'])
     .nullable(),
+  runtime: VisionRuntimeTimingSchema.nullable().optional(),
 });
 
 export const VisionClassMetricsSchema = z.object({
@@ -160,6 +185,10 @@ export const VisionAggregateMetricsSchema = z.object({
   // completed, every image was classified, and the result was thrown away at
   // validation. min(1) because a benchmark with no classes is meaningless.
   perClass: z.array(VisionClassMetricsSchema).min(1),
+  medianPromptEvalMs: NullableNonNegative.optional(),
+  medianTokensPerSecond: NullableNonNegative.optional(),
+  outputTokensTotal: z.number().int().nonnegative().nullable().optional(),
+  modelLoadMs: NullableNonNegative.optional(),
 });
 
 export const VisionBenchmarkEvidenceSchema = z
@@ -187,6 +216,7 @@ export const VisionBenchmarkEvidenceSchema = z
     metrics: VisionAggregateMetricsSchema,
     thresholds: VisionBenchmarkThresholdsSchema,
     passed: z.boolean(),
+    hardwareFit: VisionHardwareFitSchema.nullable().optional(),
     limitations: z.array(z.string().min(1)),
     // Optional on purpose: evidence written before datasets could define
     // their own classes has no such field, and must keep parsing. Readers

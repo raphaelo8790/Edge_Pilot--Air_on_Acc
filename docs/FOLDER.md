@@ -44,6 +44,7 @@ or `privacy_class`.
 
 These folders point here. Each link below resolves in both directions.
 
+- [`docs/pdf/`](pdf/FOLDER.md)
 - [`tests/benchmark/`](../tests/benchmark/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

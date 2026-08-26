@@ -68,6 +68,8 @@ standalone output setting the Dockerfile depends on.
 These folders point here. Each link below resolves in both directions.
 
 - [`.github/`](.github/FOLDER.md)
+- [`LICENSES/`](LICENSES/FOLDER.md)
+- [`docs/pdf/`](docs/pdf/FOLDER.md)
 - [`scripts/db/`](scripts/db/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

@@ -10,8 +10,11 @@
  * thing in the request path that can see GEMINI_API_KEY and GROQ_API_KEY.
  */
 
+import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { digestPrompt } from '@/core/logging/SessionLog';
+import { logForRequest } from '@/core/logging/sessionLogStore';
 import { BenchmarkRequestSchema } from '@/modules/benchmark/application/dtos/BenchmarkRequest';
 import { statusForFailedRun } from '@/modules/benchmark/application/use-cases/RunBenchmark';
 import {
@@ -28,6 +31,17 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
+  // Null unless the caller sent a session header. No header, no record — the
+  // default stays "we kept no record of what you ran".
+  //
+  // This route records because a benchmark run IS the event a session log
+  // exists to hold. Until now only /comparisons wrote anything, so a user who
+  // had benchmarked all day still saw an empty activity log.
+  const log = logForRequest(request);
+
+  // One id across every event this request produces, so an exported log can
+  // be read as "these four lines were one thing the user did".
+  const correlationId = randomUUID();
   let body: unknown;
 
   try {
@@ -58,10 +72,34 @@ export async function POST(request: Request) {
     );
   }
 
+  log?.record(
+    'info',
+    'benchmark',
+    'Benchmark requested',
+    {
+      workload_id: parsed.data.workload_id,
+      provider: parsed.data.provider,
+      model: parsed.data.model ?? null,
+      iterations: parsed.data.iterations ?? null,
+      // Content is never stored; the digest proves two runs used the same
+      // prompt without reproducing it.
+      prompt: digestPrompt(parsed.data.prompt ?? '', log.includePromptText),
+    },
+    correlationId
+  );
+
   try {
     const outcome = await runBenchmarkUseCase().execute(parsed.data);
 
     if (!outcome.ok) {
+      log?.record(
+        'warn',
+        'benchmark',
+        `Benchmark not run: ${outcome.error}`,
+        { detail: outcome.detail, status: outcome.status },
+        correlationId
+      );
+
       return NextResponse.json(
         { success: false, error: outcome.error, details: outcome.detail },
         { status: outcome.status }
@@ -73,13 +111,59 @@ export async function POST(request: Request) {
     // Every provider failed. The run is still returned: the fallback chain in
     // it is exactly what an operator needs to diagnose the failure.
     if (run.status === 'failed') {
+      log?.record(
+        'error',
+        'benchmark',
+        `Every provider failed for ${run.model}`,
+        {
+          requested_provider: run.requested_provider,
+          model: run.model,
+          // The whole chain, not just the last failure: which providers were
+          // tried and why each one gave up is the diagnosis.
+          fallback_chain: run.fallback_chain,
+        },
+        correlationId
+      );
+
       return NextResponse.json(
         { success: false, error: 'All providers failed', data: run },
         { status: statusForFailedRun(run) }
       );
     }
 
-    return NextResponse.json({ success: true, data: run });
+    // The measurement itself, with the provenance that qualifies it. A log
+    // that said only "a benchmark ran" would not be worth exporting.
+    log?.record(
+      'info',
+      'benchmark',
+      `Measured ${run.model} on ${run.effective_provider ?? run.requested_provider}`,
+      {
+        benchmark_id: run.benchmark_id,
+        requested_provider: run.requested_provider,
+        effective_provider: run.effective_provider,
+        model: run.model,
+        fallback_used: run.fallback_used,
+        // Recorded rather than hidden: a figure produced by the demo adapter
+        // must never be read later as a measurement of real hardware.
+        simulated: run.simulated,
+        iterations: run.results.length,
+        summary: run.summary,
+        cold_start_ms: run.cold_start?.latency_ms ?? null,
+        readiness_score: run.readiness_score,
+        // False when the run completed but the database refused it, which is
+        // the difference between "no result" and "a result nobody kept".
+        persisted: run.persisted,
+        assumptions: run.assumptions,
+        limitations: run.limitations,
+      },
+      correlationId
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: run,
+      meta: { session_logged: log !== null, correlation_id: correlationId },
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -89,6 +173,14 @@ export async function POST(request: Request) {
     }
 
     console.error('Benchmark error:', error);
+
+    log?.record(
+      'error',
+      'benchmark',
+      'Benchmark failed with an unexpected error',
+      { message: error instanceof Error ? error.message : 'unknown' },
+      correlationId
+    );
 
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

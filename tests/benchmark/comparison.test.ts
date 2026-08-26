@@ -82,6 +82,30 @@ describe('checkModalityCompatibility', () => {
 });
 
 describe('planComparison', () => {
+  it('refuses the same model entered twice', () => {
+    // Entrants are labelled provider+model and the report's tally is keyed by
+    // that label, so a duplicate collides onto one key and the comparison
+    // would declare a winner between a model and itself.
+    const plan = planComparison([
+      { provider: 'ollama', providerType: 'local', model: 'llama3.2:latest', families: ['llama'] },
+      { provider: 'ollama', providerType: 'local', model: 'llama3.2:latest', families: ['llama'] },
+    ]);
+
+    expect(plan.runnable).toBe(false);
+    expect(plan.refusal).toMatch(/more than once/i);
+  });
+
+  it('allows two different tags of the same family', () => {
+    // The rule is about identity, not similarity: 1b and 3b are a legitimate
+    // comparison and must not be caught by it.
+    const plan = planComparison([
+      { provider: 'ollama', providerType: 'local', model: 'llama3.2:1b', families: ['llama'] },
+      { provider: 'ollama', providerType: 'local', model: 'llama3.2:3b', families: ['llama'] },
+    ]);
+
+    expect(plan.runnable).toBe(true);
+  });
+
   it('runs two local models sequentially and explains why', () => {
     const plan = planComparison([
       { provider: 'ollama', providerType: 'local', model: 'mistral:7b', families: ['llama'] },

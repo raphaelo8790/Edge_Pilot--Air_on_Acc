@@ -37,4 +37,10 @@ There is **no UI for this endpoint yet**.
 - [`prisma/migrations/`](../../../../../../prisma/migrations/FOLDER.md) - the
   migration that created `shared_findings`.
 
+## Referenced from
+
+These folders point here. Each link below resolves in both directions.
+
+- [`src/app/history/`](../../../../history/FOLDER.md)
+
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

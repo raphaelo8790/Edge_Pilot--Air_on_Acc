@@ -7,7 +7,9 @@ import {
 import { VisionDashboardRow } from '@/modules/vision-benchmark/core/types';
 import { FileVisionEvidenceStore } from '@/modules/vision-benchmark/infrastructure/evidence-store';
 import { DatasetUpload } from '@/components/vision/DatasetUpload';
+import { RunBuiltInDataset } from '@/components/vision/RunBuiltInDataset';
 import { ProviderLogo } from '@/components/dashboard/ProviderLogo';
+import { ArcadeNavLinks } from '@/components/ArcadeNav';
 import { PaletteToggle } from '@/components/PaletteToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import '../dashboard/dashboard.css';
@@ -53,6 +55,18 @@ export default async function VisionBenchmarkPage() {
               deterministic metrics, validated evidence, and the same
               21-image workload.
             </p>
+            <div className="ep-rise ep-rise-2 mt-4 text-sm text-mist-400">
+              <ArcadeNavLinks
+                items={[
+                  { href: '/', label: 'home' },
+                  { href: '/dashboard', label: 'dashboard' },
+                  { href: '/compare', label: 'compare' },
+                  { href: '/evidence', label: 'evidence' },
+                  { href: '/evaluation', label: 'matrix' },
+                  { href: '/history', label: 'history' },
+                ]}
+              />
+            </div>
           </div>
           <div className="ep-rise ep-rise-2 flex items-center gap-2">
             <PaletteToggle className="rounded-lg border border-ink-600 px-3 py-2 text-xs text-mist-400 transition hover:border-pulse-500 hover:text-mist-100" />
@@ -94,17 +108,29 @@ export default async function VisionBenchmarkPage() {
         <section className="ep-rise ep-rise-4 overflow-hidden rounded-2xl border border-ink-700 bg-ink-900">
           <div className="border-b border-ink-700 px-6 py-5">
             <h2 className="font-display text-xl font-semibold tracking-tight">
-              Provider evidence
+              Reference measurements
             </h2>
             <p className="mt-1 text-sm text-mist-400">
-              Controlled rows prove the integration path; live rows are
-              created only by authenticated provider execution.
+              The measurements committed with this project — not a log of
+              visitor activity. Controlled rows prove the integration path;
+              live rows were produced by authenticated provider execution and
+              are versioned in the repository so a reviewer can read them
+              without running anything. Runs you start below stay in your own
+              browser and never appear here.
+            </p>
+            <p className="mt-2 text-sm text-mist-400">
+              <strong>Passing requires all four:</strong> accuracy ≥ 80%, macro
+              F1 ≥ 0.75, invalid output ≤ 5%, and ≥ 95% of requests answered. A
+              row marked failed did not clear one of them — the reference
+              llava run is kept precisely because it fails.
             </p>
           </div>
 
           {rows.length === 0 ? (
             <div className="px-6 py-14 text-center text-mist-400">
-              No validated evidence files are available.
+              No reference measurements are committed yet. Generate one with
+              npm run vision:run:ollama -- --model=&lt;tag&gt;, or run the dataset
+              below to measure a model without committing anything.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -184,6 +210,16 @@ export default async function VisionBenchmarkPage() {
           )}
         </section>
 
+        {/*
+          Straight down the page: what has already been measured, then the
+          control that measures the shipped dataset, then the one that
+          measures images you bring. Each full width - side by side made both
+          of them cramped and buried neither.
+        */}
+        <section className="epd epd-embedded mt-8">
+          <RunBuiltInDataset />
+        </section>
+
         <section className="mt-8 grid gap-5 lg:grid-cols-3">
           <Guardrail
             title="Reproducible dataset"
@@ -200,14 +236,16 @@ export default async function VisionBenchmarkPage() {
         </section>
 
         {/*
-          Client component. The images never reach this server - they are read,
-          resized, hashed and classified in the visitor's own browser against
-          their own Ollama. See DatasetUpload for why that is a requirement
-          rather than a convenience.
+          Your own images never reach this server - they are read, resized,
+          hashed and classified in the visitor's own browser against their own
+          Ollama. See DatasetUpload for why that is a requirement rather than
+          a convenience.
         */}
-        <section className="epd mt-10 overflow-hidden rounded-2xl">
+        <section className="epd epd-embedded mt-8">
           <DatasetUpload host="http://localhost:11434" />
         </section>
+
+
       </div>
     </main>
   );

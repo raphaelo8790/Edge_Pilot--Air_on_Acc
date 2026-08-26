@@ -18,6 +18,7 @@ import { PaletteToggle } from "@/components/PaletteToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 import type { BenchmarkRun } from "./api";
+import { addBenchmarkRun } from "@/components/vision/runHistory";
 import { requirementFor, type TaskType } from "@/modules/benchmark/core/services/TaskCompatibility";
 import { getLocalRuntime, type LocalModel } from "./api";
 import { InstalledModels } from "./InstalledModels";
@@ -97,6 +98,7 @@ export function DashboardApp() {
               { href: "/evidence", label: "evidence" },
               { href: "/evaluation", label: "matrix" },
               { href: "/vision-benchmark", label: "vision" },
+              { href: "/history", label: "history" },
             ]}
           />
         </div>
@@ -164,6 +166,7 @@ export function DashboardApp() {
                   : "Multimodal"
               }
               visionModels={visionModels}
+              selectedModel={model}
               onBack={() => setStep(2)}
             />
           ) : null}
@@ -175,6 +178,10 @@ export function DashboardApp() {
               model={model}
               onComplete={(r) => {
                 setRun(r);
+                // Keep it. Before this the run vanished the moment you
+                // navigated away, and /history could only ever show vision
+                // runs. Stored in this browser, never uploaded.
+                addBenchmarkRun(r);
                 setStep(4);
               }}
               onBack={() => setStep(2)}

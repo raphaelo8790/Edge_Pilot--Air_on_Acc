@@ -70,6 +70,7 @@ These folders point here. Each link below resolves in both directions.
 - [`src/app/api/v1/workloads/`](../../app/api/v1/workloads/FOLDER.md)
 - [`src/app/vision-benchmark/`](../../app/vision-benchmark/FOLDER.md)
 - [`src/components/`](../FOLDER.md)
+- [`src/components/history/`](../history/FOLDER.md)
 - [`src/core/logging/`](../../core/logging/FOLDER.md)
 
 <p align="right"><sub><i>Adham Yakout</i></sub></p>

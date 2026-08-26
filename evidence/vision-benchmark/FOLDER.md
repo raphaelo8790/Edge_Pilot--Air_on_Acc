@@ -36,7 +36,7 @@ second one is explicitly un-ignored, with the reason written beside the rule.
 | File | What it is |
 |---|---|
 | `live-ollama-llava-latest-2026-08-23t20-03-01-476z.json` | **The reference measurement.** `llava:latest`, 21 samples, 14 correct: 66.7% accuracy, macro-F1 0.667, 0% invalid output, 100% request success, median 529.6 ms, p95 721.4 ms. `"passed": false` - it fails its own 0.80 accuracy and 0.75 macro-F1 gates. Committed *because* it fails |
-| `live-ollama-llava-latest-2026-08-23t19-25-20-341z.json` | The earlier run, before warm-up. Median 1322.1 ms. Git-ignored |
+| the earlier pre-warm-up run | Median 1322.1 ms against the kept run's 529.6 ms. Git-ignored, so it is **not in this repository** - the figure is quoted here because the comparison is the point, not the file |
 | `controlled-ollama.json` | Deterministic run against a scripted local provider - proves the pipeline, not the model |
 | `controlled-gemini.json` | The same for the cloud provider shape |
 
