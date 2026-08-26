@@ -349,6 +349,8 @@ export class MemorySessionLogStore implements SessionLogStore {
     this.defaults = {
       maxEvents: options.maxEvents,
       includePromptText: options.includePromptText,
+      // The persistence sink, when a database-backed store wraps this one.
+      sink: options.sink,
     };
   }
 
