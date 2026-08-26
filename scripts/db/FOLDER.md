@@ -32,6 +32,7 @@ passed.
 
 | File | What it is |
 |---|---|
+| `inspect-neon.mjs` | Prints the tables and columns the shared database actually has, plus its recorded migration history - names only, never rows. For when `migrate deploy` says nothing is pending and the schema disagrees |
 | `neon.mjs` | 126 lines. The single entry point for Prisma commands against the shared database. Reads the env file itself, sets the variables, **prints the destination host before doing anything**, and passes flags through intact. Backs `db:neon`, `db:neon:deploy`, `db:neon:seed`, `db:neon:studio`, `db:neon:status` |
 | `require-env-file.mjs` | 71 lines. Refuses to proceed unless `.env.neon` exists, parses, and names a host that is not local |
 

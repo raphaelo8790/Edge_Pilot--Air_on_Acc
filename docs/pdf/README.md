@@ -9,7 +9,7 @@ tree open.
 | `00 - EdgePilot AI - Complete Documentation.pdf` | Everything - the project record plus all 88 folder documents, 115 pages |
 | `01-project-record` | Every change, the work package it belongs to, the comparison against `main`, the architecture argument, and the known gaps |
 | `02-project-root` | The root folder, CI, and statically served files |
-| `03-database` | Schema, seed, and the five migrations |
+| `03-database` | Schema, seed, and the six migrations |
 | `04-documentation` | The written documentation set |
 | `05-evidence` | Measured runs, failure captures, the ten-case matrix, vision measurements |
 | `06-datasets` | The reference vision dataset |
