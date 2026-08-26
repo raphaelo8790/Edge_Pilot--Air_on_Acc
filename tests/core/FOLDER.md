@@ -22,6 +22,7 @@ all.
 
 | File | What it covers |
 |---|---|
+| `prisma-session-log-store.test.ts` | The database-backed log store against a fake client: every event persisted, an export from another process reads them all, discard deletes one session only, a failing database never throws |
 | `cloud-run-quota.test.ts` | The per-visitor cap on cloud vision runs made with the server's key: the allowance, the hour window, and session separation |
 | `session-log.test.ts` | 224 lines. Redaction, prompt digests, the share payload and its consent statement, and the in-memory store's bounds |
 

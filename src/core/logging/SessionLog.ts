@@ -117,6 +117,13 @@ export interface SessionLogOptions {
   maxEvents?: number;
   /** Whether prompt text may be stored for this session. */
   includePromptText?: boolean;
+  /**
+   * Called with every event as it is recorded, after redaction. A store that
+   * persists events (the database-backed one) supplies this; the memory
+   * store does not. The log itself stays synchronous - `record` never waits
+   * on a sink - so a slow or failing database cannot stall a benchmark.
+   */
+  sink?: (sessionId: string, event: SessionEvent) => void;
 }
 
 const DEFAULT_MAX_EVENTS = 500;
@@ -124,6 +131,7 @@ const DEFAULT_MAX_EVENTS = 500;
 export class SessionLog {
   private readonly events: SessionEvent[] = [];
   private readonly maxEvents: number;
+  private readonly sink?: (sessionId: string, event: SessionEvent) => void;
 
   public readonly includePromptText: boolean;
 
@@ -134,6 +142,18 @@ export class SessionLog {
   ) {
     this.maxEvents = options.maxEvents ?? DEFAULT_MAX_EVENTS;
     this.includePromptText = options.includePromptText ?? false;
+    this.sink = options.sink;
+  }
+
+  /**
+   * Fills the log with events read back from storage. Used by a persistent
+   * store when it opens a session for export; never by `record`.
+   */
+  public hydrate(events: SessionEvent[]): void {
+    this.events.length = 0;
+    for (const event of events.slice(-this.maxEvents)) {
+      this.events.push(event);
+    }
   }
 
   public record(
@@ -143,20 +163,24 @@ export class SessionLog {
     data: Record<string, unknown> = {},
     correlationId: string | null = null
   ): void {
-    this.events.push({
+    const event: SessionEvent = {
       at: new Date().toISOString(),
       level,
       category,
       message,
       correlationId,
       data: redact(data) as Record<string, unknown>,
-    });
+    };
+
+    this.events.push(event);
 
     // Ring buffer: a long session must not grow without bound, and the recent
     // past is what anybody debugging actually wants.
     while (this.events.length > this.maxEvents) {
       this.events.shift();
     }
+
+    this.sink?.(this.sessionId, event);
   }
 
   public size(): number {
@@ -185,7 +209,7 @@ export class SessionLog {
     const disclosure = [
       'Prompt text is recorded as a character count and a SHA-256 prefix, not as content.',
       'Any field whose name suggests a credential is replaced with "[redacted]" before storage.',
-      'This log is held in the server process memory only. It is not written to a database and does not survive a restart.',
+      'This log is stored keyed by the session id only, is deleted when you discard it, and is pruned automatically after a retention window.',
       'No account, user identity or IP address is recorded.',
     ];
 
@@ -281,10 +305,22 @@ export function buildSharePayload(log: SessionLog): SharePayload {
  * Where session logs live. In-memory today; see the file header.
  */
 export interface SessionLogStore {
+  /** A log already open in this process, or null. Never reads storage. */
   get(sessionId: string): SessionLog | null;
+  /** A log to RECORD into. Cheap; does not read storage. */
   open(sessionId: string, options?: SessionLogOptions): SessionLog;
+  /** Drops the in-process copy. Storage is untouched; see `discard`. */
   close(sessionId: string): void;
   count(): number;
+  /**
+   * A log to READ - export, share preview - with every event this session
+   * has recorded, wherever it was recorded. Null when there is nothing.
+   */
+  load(sessionId: string): Promise<SessionLog | null>;
+  /** Deletes the session's events everywhere: memory and storage. */
+  discard(sessionId: string): Promise<void>;
+  /** Waits for any writes still in flight. A no-op for the memory store. */
+  flush(): Promise<void>;
 }
 
 export interface MemorySessionLogStoreOptions extends SessionLogOptions {
@@ -402,5 +438,17 @@ export class MemorySessionLogStore implements SessionLogStore {
   public count(): number {
     this.sweep(Date.now());
     return this.sessions.size;
+  }
+
+  public async load(sessionId: string): Promise<SessionLog | null> {
+    return this.get(sessionId);
+  }
+
+  public async discard(sessionId: string): Promise<void> {
+    this.close(sessionId);
+  }
+
+  public async flush(): Promise<void> {
+    /* nothing in flight: memory is written synchronously */
   }
 }

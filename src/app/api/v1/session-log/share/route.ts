@@ -20,6 +20,7 @@ import {
 } from '@/core/logging/SessionLog';
 import {
   SESSION_HEADER,
+  logForRequest,
   sessionLogStore,
 } from '@/core/logging/sessionLogStore';
 
@@ -59,8 +60,7 @@ function nothingRecorded() {
       details:
         'This session has no activity to share. The log starts empty and ' +
         'fills as you register a workload, check the local runtime, or run a ' +
-        'benchmark or comparison. It lives in this server\u2019s memory only, so ' +
-        'restarting the dev server clears it.',
+        'benchmark or comparison.',
     },
     { status: 404 }
   );
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
     return noSession();
   }
 
-  const log = sessionLogStore.get(sessionId);
+  const log = await sessionLogStore.load(sessionId);
 
   if (!log) {
     return nothingRecorded();
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     return noSession();
   }
 
-  const log = sessionLogStore.get(sessionId);
+  const log = await sessionLogStore.load(sessionId);
 
   if (!log) {
     return nothingRecorded();
@@ -142,10 +142,14 @@ export async function POST(request: Request) {
       select: { id: true, createdAt: true },
     });
 
-    log.record('info', 'config', 'Session log shared with the maintainers', {
-      shared_id: row.id,
-      event_count: payload.event_count,
-    });
+    // Recorded through the RECORDING log (the one with a persistence sink),
+    // not the loaded read-only copy the payload was built from.
+    logForRequest(request)?.record(
+      'info',
+      'config',
+      'Session log shared with the maintainers',
+      { shared_id: row.id, event_count: payload.event_count }
+    );
 
     return NextResponse.json({
       success: true,

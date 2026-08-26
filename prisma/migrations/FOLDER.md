@@ -30,6 +30,7 @@ irreversible, which is why it was rehearsed locally first.
 | `20260822081030_optional_email_and_session_owner/` | Adds `users.session_id` with a unique index and makes `email` optional. This is what makes account-free row ownership possible |
 | `20260823035500_drop_devices/` | 31 lines. Drops two foreign keys, the `benchmarks_device_id_idx` index, the `benchmarks.device_id` column, and the `devices` table |
 | `20260823165500_warmup_iteration/` | Adds `benchmark_results.warmup BOOLEAN NOT NULL DEFAULT false`. The discarded cold-start iteration is stored and flagged, never deleted - the arithmetic can be checked from the rows |
+| `20260826150000_session_events/` | Adds `session_events`: the activity log, one row per event keyed by the browser's session id, indexed by session and by time. The log had lived in server memory, which a hosted, multi-instance server does not keep between requests |
 | [`20260826070000_reconcile_providers_and_rate_limits/`](20260826070000_reconcile_providers_and_rate_limits/FOLDER.md) | Conditional. Brings a database created from the team's original init (old `providers` columns, no `rate_limits`) up to this schema; a no-op on one already there. Written when the shared Neon database turned out to be in that state at deployment |
 | `migration_lock.toml` | Provider lock. Not hand-edited |
 

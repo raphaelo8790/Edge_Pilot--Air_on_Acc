@@ -39,7 +39,9 @@ export async function GET(request: Request) {
     );
   }
 
-  const log = sessionLogStore.get(sessionId);
+  // `load`, not `get`: the events may have been recorded by any instance of
+  // this server, and only storage has all of them.
+  const log = await sessionLogStore.load(sessionId);
 
   if (!log) {
     return NextResponse.json(
@@ -49,9 +51,8 @@ export async function GET(request: Request) {
         details:
           'The log starts empty and fills as you use the application \u2014 ' +
           'registering a workload, checking the local runtime, running a ' +
-          'benchmark, a comparison or a vision run all write to it. It is kept ' +
-          'in this server\u2019s memory only, so it is discarded when the server ' +
-          'restarts or after a period of inactivity.',
+          'benchmark, a comparison or a vision run all write to it. It is ' +
+          'kept for a limited time and deleted when you discard it.',
       },
       { status: 404 }
     );
@@ -79,7 +80,7 @@ export async function DELETE(request: Request) {
     );
   }
 
-  sessionLogStore.close(sessionId);
+  await sessionLogStore.discard(sessionId);
 
   return NextResponse.json({
     success: true,

@@ -30,12 +30,27 @@ The store is cached on `globalThis` for the same reason the Prisma client is:
 Next.js hot-reloads modules in development, and a fresh store per reload would
 drop every session log mid-use.
 
+## What changed for hosting
+
+`PrismaSessionLogStore.ts` is new. The memory store held each session's
+events in the server process, which was right for one long-lived process on a
+laptop and wrong the moment the app was hosted: a serverless request lands on
+any instance, none keep memory between calls, and the first hosted export came
+back with two events out of a whole session. The database store writes every
+event to `session_events` through a sink as it is recorded - `record` stays
+synchronous - and `sessionLogStore.ts` settles the queued writes after the
+response with Next's `after`. Exports and the share preview `load` from
+storage; `discard` deletes; rows are pruned after seven days. A failing
+database drops writes with one warning and reads fall back to memory. The
+memory store remains for tests and for a checkout with no `DATABASE_URL`.
+
 ## Files
 
 | File | What it is |
 |---|---|
-| `SessionLog.ts` | 407 lines. The log, its event and category vocabulary, `redact`, `digestPrompt`, the in-memory store, `buildSharePayload` and `SHARE_CONSENT_STATEMENT` |
-| `sessionLogStore.ts` | 56 lines. The process-wide store, the `x-edgepilot-session` header name, and `logForRequest` |
+| `SessionLog.ts` | The log (with an optional persistence sink and `hydrate`), its event and category vocabulary, `redact`, `digestPrompt`, the store interface (`get`/`open`/`close` for recording, `load`/`discard`/`flush` for storage), the in-memory store, `buildSharePayload` and `SHARE_CONSENT_STATEMENT` |
+| `PrismaSessionLogStore.ts` | The database-backed store: every event to `session_events` as recorded, all of them back for an export, retention pruned on read, and never a throw into the caller |
+| `sessionLogStore.ts` | The process-wide store - database-backed when `DATABASE_URL` is set, memory otherwise - the `x-edgepilot-session` header name, `logForRequest`, and the `after()` flush that settles persisted writes once the response has gone out |
 
 ## Connected folders
 

@@ -122,9 +122,10 @@ export function SessionHistory() {
       </h1>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-mist-400">
         Everything this browser has produced. Nothing here was uploaded when it
-        was created — the benchmark runs below live in this browser and the
-        activity log lives in this server&apos;s memory for the length of the
-        session. Sending either one anywhere is a separate, deliberate act.
+        was created — the benchmark runs below live in this browser, and the
+        activity log is kept under this browser&apos;s session id only, for a
+        limited time, until you discard it. Sending either one anywhere is a
+        separate, deliberate act.
       </p>
 
       {/* ---------------------------------------------------------------- */}

@@ -169,6 +169,28 @@ model ReadinessScore {
 /// stripped even when the session had opted into recording it locally, because
 /// consenting to keep a transcript on your own machine is not consenting to
 /// upload it.
+/// The session activity log, one row per event, keyed by the browser's own
+/// session id. Written by every route and server action that records to the
+/// log; read back by /api/v1/session-log and the share preview. Hosted, this
+/// is the only place a log can live: a serverless function's memory does not
+/// survive the request, let alone until the visitor asks for the export.
+/// Prompt text is never here - the recorder digests it before the row is
+/// written - and rows are pruned after a retention window.
+model SessionEvent {
+  id            String   @id @default(uuid())
+  sessionId     String   @map("session_id")
+  at            DateTime
+  level         String
+  category      String
+  message       String
+  correlationId String?  @map("correlation_id")
+  data          Json     @default("{}")
+
+  @@index([sessionId, at])
+  @@index([at])
+  @@map("session_events")
+}
+
 /// No account, no user id, no IP. The session id is client-generated and is the
 /// only identifier here; it is not traceable to a person by us.
 model SharedFinding {

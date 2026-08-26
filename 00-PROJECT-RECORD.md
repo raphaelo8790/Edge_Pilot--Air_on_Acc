@@ -692,6 +692,17 @@ it. Hosted, an unauthenticated endpoint announcing row counts and migration
 names to whoever asks is not a diagnostic, and the panel was a debugging aid on
 a user-facing page. Both are kept outside the repository for local use.
 
+**The activity log moved into the database.** The first hosted export came
+back with two events out of a whole session, and the reason was structural:
+the log lived in server process memory, a serverless request lands on any
+instance, and none of them keep memory between calls. `PrismaSessionLogStore`
+writes every event to a new `session_events` table through a sink as it is
+recorded - `record` stays synchronous, and the queued writes are settled after
+the response with Next's `after` - and exports and the share preview read from
+storage. Rows carry the browser's session id and nothing else, are pruned after
+seven days, and are deleted on discard. A failing database drops writes with
+one warning; the log is a convenience and must never be why a run failed.
+
 **Smaller things that would have broken the deployment.** The evidence commit
 hash falls back to `VERCEL_GIT_COMMIT_SHA` (no `.git` on Vercel);
 `next.config.mjs` traces `datasets/` into the build (a `readFile` path is not an

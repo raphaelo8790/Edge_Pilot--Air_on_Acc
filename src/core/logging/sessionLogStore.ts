@@ -11,18 +11,33 @@
  * what you ran", which is the only default consistent with the rest of it.
  */
 
+import { after } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import {
   MemorySessionLogStore,
   type SessionLog,
   type SessionLogStore,
 } from './SessionLog';
+import { PrismaSessionLogStore } from './PrismaSessionLogStore';
 
 const globalForLogs = globalThis as unknown as {
   edgepilotSessionLogs: SessionLogStore | undefined;
 };
 
+/**
+ * Database-backed whenever a database is configured; memory otherwise (tests,
+ * and a checkout with no DATABASE_URL). Hosted, memory alone loses the log
+ * between requests - see PrismaSessionLogStore.
+ */
+function createStore(): SessionLogStore {
+  const configured = (process.env.DATABASE_URL ?? '').trim() !== '';
+  return configured && process.env.NODE_ENV !== 'test'
+    ? new PrismaSessionLogStore(prisma)
+    : new MemorySessionLogStore();
+}
+
 export const sessionLogStore: SessionLogStore =
-  globalForLogs.edgepilotSessionLogs ?? new MemorySessionLogStore();
+  globalForLogs.edgepilotSessionLogs ?? createStore();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForLogs.edgepilotSessionLogs = sessionLogStore;
@@ -71,6 +86,16 @@ export function logForSession(
 
   if (!id || !SESSION_ID_PATTERN.test(id)) {
     return null;
+  }
+
+  // Persisted writes are queued as events are recorded and settled after the
+  // response has gone out - the window a hosted function stays alive for.
+  // Outside a request (a script, a test) `after` throws; the memory store
+  // needs no flush and the database store flushes on its next read.
+  try {
+    after(() => sessionLogStore.flush());
+  } catch {
+    /* not in a request context */
   }
 
   return sessionLogStore.open(id, {
