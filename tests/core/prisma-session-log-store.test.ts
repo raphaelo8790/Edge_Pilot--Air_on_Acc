@@ -25,9 +25,9 @@ function fakePrisma(options: { failing?: boolean } = {}) {
 
   const client = {
     sessionEvent: {
-      create: async ({ data }: { data: Omit<Row, 'id'> }) => {
+      create: async ({ data }: { data: Row | Omit<Row, 'id'> }) => {
         if (options.failing) return fail();
-        const row = { id: String(next++), ...data };
+        const row = 'id' in data ? (data as Row) : { id: String(next++), ...data };
         rows.push(row);
         return row;
       },
@@ -35,7 +35,9 @@ function fakePrisma(options: { failing?: boolean } = {}) {
         if (options.failing) return fail();
         return rows
           .filter((r) => r.sessionId === where.sessionId)
-          .sort((a, b) => b.at.getTime() - a.at.getTime())
+          .sort(
+            (a, b) => b.at.getTime() - a.at.getTime() || b.id.localeCompare(a.id)
+          )
           .slice(0, take);
       },
       deleteMany: async ({ where }: { where: { sessionId?: string; at?: { lt: Date } } }) => {

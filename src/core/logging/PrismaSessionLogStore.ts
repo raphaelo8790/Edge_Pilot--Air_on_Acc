@@ -50,6 +50,8 @@ export class PrismaSessionLogStore implements SessionLogStore {
   private readonly retentionMs: number;
   private pending: Promise<unknown>[] = [];
   private readonly warned = new Set<string>();
+  /** Breaks timestamp ties from this process; see the id note in `persist`. */
+  private sequence = 0;
 
   public constructor(
     private readonly prisma: PrismaClient,
@@ -63,9 +65,22 @@ export class PrismaSessionLogStore implements SessionLogStore {
   }
 
   private persist(sessionId: string, event: SessionEvent): void {
+    // A time-ordered id rather than a random uuid: two events recorded in
+    // the same millisecond (a route records several in a row) would tie on
+    // `at`, and a tie has no defined order in SQL. Sorting by (at, id) with
+    // an id that embeds the time and a per-process counter keeps a session's
+    // events in the order they were recorded.
+    this.sequence += 1;
+    const id = [
+      String(Date.parse(event.at)).padStart(15, '0'),
+      String(this.sequence).padStart(6, '0'),
+      Math.random().toString(36).slice(2, 10),
+    ].join('-');
+
     const write = this.prisma.sessionEvent
       .create({
         data: {
+          id,
           sessionId,
           at: new Date(event.at),
           level: event.level,
@@ -131,7 +146,7 @@ export class PrismaSessionLogStore implements SessionLogStore {
 
       rows = await this.prisma.sessionEvent.findMany({
         where: { sessionId },
-        orderBy: { at: 'desc' },
+        orderBy: [{ at: 'desc' }, { id: 'desc' }],
         take: MAX_EVENTS,
       });
     } catch (error) {
