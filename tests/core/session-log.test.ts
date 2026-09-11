@@ -121,29 +121,59 @@ describe('MemorySessionLogStore', () => {
   // This path was silently dead under the project's es5 target: the sweep used
   // `for...of` over a Map, which downlevels to an index loop that iterates
   // nothing. Nothing failed - sessions simply never expired. Covered now.
-  it('expires a session that has been idle past its TTL', async () => {
-    const store = new MemorySessionLogStore({ ttlMs: 5 });
-    store.open('abcd1234');
+  /**
+   * WHY THESE USE FAKE TIMERS.
+   *
+   * They used to sleep on the real clock: `setTimeout(15)` against a 40 ms
+   * TTL. That is a 2.6x margin, and it does not survive a loaded test run -
+   * Windows rounds timers to ~15.6 ms, and under jest's parallel workers a
+   * 15 ms sleep routinely lands past 40 ms. The session then expires exactly
+   * as designed and the assertion fails, so the suite went red on a machine
+   * that was merely busy.
+   *
+   * The store reads Date.now() directly, and jest's modern fake timers mock
+   * Date.now() as well as setTimeout. Advancing the clock by hand tests the
+   * TTL rule itself rather than the scheduler's punctuality, which is the
+   * only thing these were ever meant to assert.
+   */
+  it('expires a session that has been idle past its TTL', () => {
+    jest.useFakeTimers();
 
-    expect(store.count()).toBe(1);
+    try {
+      const store = new MemorySessionLogStore({ ttlMs: 5 });
+      store.open('abcd1234');
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, 30);
-    });
+      expect(store.count()).toBe(1);
 
-    expect(store.count()).toBe(0);
-    expect(store.get('abcd1234')).toBeNull();
+      jest.advanceTimersByTime(30);
+
+      expect(store.count()).toBe(0);
+      expect(store.get('abcd1234')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
-  it('keeps a session alive while it is being used', async () => {
-    const store = new MemorySessionLogStore({ ttlMs: 40 });
-    store.open('abcd1234');
+  it('keeps a session alive while it is being used', () => {
+    jest.useFakeTimers();
 
-    for (let i = 0; i < 3; i += 1) {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 15);
-      });
-      expect(store.get('abcd1234')).not.toBeNull();
+    try {
+      const store = new MemorySessionLogStore({ ttlMs: 40 });
+      store.open('abcd1234');
+
+      // Each read is a use, and each use pushes the deadline out. Three
+      // gaps of 15 ms total 45 ms - past the TTL if the refresh did NOT
+      // happen, which is what makes this test worth having.
+      for (let i = 0; i < 3; i += 1) {
+        jest.advanceTimersByTime(15);
+        expect(store.get('abcd1234')).not.toBeNull();
+      }
+
+      // And it still expires once nobody touches it.
+      jest.advanceTimersByTime(41);
+      expect(store.get('abcd1234')).toBeNull();
+    } finally {
+      jest.useRealTimers();
     }
   });
 

@@ -175,7 +175,13 @@ describe('Ollama vision provider', () => {
 });
 
 describe('Gemini vision provider', () => {
-  test('sends inline image data through the cloud interactions API', async () => {
+  /**
+   * These assert against GOOGLE'S documented contract, not against whatever
+   * this file happens to send. The previous version of this test mirrored the
+   * provider's own (wrong) request shape, so both agreed on an endpoint that
+   * does not exist and every hosted run 404'd with the suite green.
+   */
+  test('posts the image to models/{model}:generateContent', async () => {
     let capturedInput: string | URL | undefined;
     let capturedInit: RequestInit | undefined;
     const fetchImplementation: VisionFetch = async (input, init) => {
@@ -184,7 +190,12 @@ describe('Gemini vision provider', () => {
 
       return new Response(
         JSON.stringify({
-          output_text: '{"label":"hardhat"}',
+          candidates: [
+            {
+              content: { parts: [{ text: '{"label":"hardhat"}' }] },
+              finishReason: 'STOP',
+            },
+          ],
         }),
         {
           status: 200,
@@ -203,20 +214,25 @@ describe('Gemini vision provider', () => {
     const headers = new Headers(capturedInit?.headers);
     const body = JSON.parse(String(capturedInit?.body));
 
+    // The model belongs in the PATH on this API. Putting it in the body is
+    // what produced the 404.
     expect(String(capturedInput)).toBe(
-      'https://generativelanguage.googleapis.com/v1beta/interactions'
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
     );
     expect(headers.get('x-goog-api-key')).toBe('test-key');
-    expect(body.model).toBe('gemini-3.6-flash');
-    expect(body.input[0].type).toBe('text');
-    expect(body.input[1]).toMatchObject({
-      type: 'image',
+    expect(body.contents[0].parts[0].text).toBeDefined();
+    expect(body.contents[0].parts[1].inline_data).toMatchObject({
       data: 'AQID',
       mime_type: 'image/png',
     });
-    expect(body.response_format.schema.properties.label.enum).toContain(
-      'safety_cone'
-    );
+    expect(body.generationConfig.responseMimeType).toBe('application/json');
+    expect(
+      body.generationConfig.responseSchema.properties.label.enum
+    ).toContain('safety_cone');
+    // Gemini REJECTS additionalProperties in a response schema.
+    expect(
+      body.generationConfig.responseSchema.additionalProperties
+    ).toBeUndefined();
     expect(response).toEqual({
       rawOutput: 'hardhat',
       latencyMs: 75,
@@ -225,15 +241,66 @@ describe('Gemini vision provider', () => {
     });
   });
 
+  test('accepts a model id already prefixed with models/', async () => {
+    let capturedInput: string | URL | undefined;
+    const provider = new GeminiVisionProvider({
+      apiKey: 'test-key',
+      model: 'models/gemini-2.5-flash',
+      fetchImplementation: async (input) => {
+        capturedInput = input;
+        return new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [{ text: '{"label":"hardhat"}' }] } }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        );
+      },
+      clock: sequenceClock([0, 10]),
+    });
+
+    await provider.classify(createRequest());
+
+    expect(String(capturedInput)).toBe(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+    );
+  });
+
+  test('reports a filtered or empty answer as a failed request, not a wrong label', async () => {
+    // A safety block returns 200 with no text. Scoring that as an incorrect
+    // prediction would blame the model for an answer it was never allowed to
+    // give; it belongs in the failed-request rate instead.
+    const provider = new GeminiVisionProvider({
+      apiKey: 'test-key',
+      model: 'gemini-3.6-flash',
+      fetchImplementation: async () =>
+        new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [] }, finishReason: 'SAFETY' }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        ),
+      clock: sequenceClock([0, 30]),
+    });
+
+    await expect(provider.classify(createRequest())).resolves.toEqual({
+      rawOutput: '',
+      latencyMs: 30,
+      success: false,
+      errorMessage: 'Gemini returned no text (SAFETY).',
+    });
+  });
+
   test('preserves malformed structured output for evaluator rejection', async () => {
     const provider = new GeminiVisionProvider({
       apiKey: 'test-key',
       model: 'gemini-3.6-flash',
       fetchImplementation: async () =>
-        new Response(JSON.stringify({ output_text: 'unknown item' }), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
+        new Response(
+          JSON.stringify({
+            candidates: [{ content: { parts: [{ text: 'unknown item' }] } }],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        ),
       clock: sequenceClock([0, 20]),
     });
 
