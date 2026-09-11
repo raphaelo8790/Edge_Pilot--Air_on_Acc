@@ -37,15 +37,40 @@ const nextConfig = {
   // https://nextjs.org/docs/app/api-reference/config/next-config-js/output
   output: 'standalone',
 
+  // sharp is a NATIVE module: a small JS wrapper in front of libvips, shipped
+  // as one prebuilt binary per platform. Left to itself the bundler turns it
+  // into an anonymous external chunk and traces only the JavaScript, so the
+  // deployed function calls dlopen on a libvips-cpp.so that was never copied
+  // and dies with ERR_DLOPEN_FAILED at request time.
+  //
+  // This is NOT an install problem. package-lock.json carries every @img
+  // platform package, and `npm ci` on a linux-x64 host installs a working
+  // sharp. The binary exists at build time and simply does not travel.
+  //
+  // Naming it here keeps it a real runtime require that file tracing
+  // understands and follows into the bundle.
+  // https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages
+  serverExternalPackages: ['sharp'],
+
   // The built-in vision dataset is read from disk at request time by the
   // dataset routes and the vision server action. A traced (Vercel or
   // standalone) build only ships files it can see imported, and a readFile
   // path is not an import - so without this the hosted site has no images
   // to serve and every built-in run fails with ENOENT.
+  //
+  // The @img entries are belt-and-braces for the same failure above: tracing
+  // should now follow sharp on its own, and these guarantee the linux binary
+  // ships even if it does not. The globs match nothing on a Windows or macOS
+  // checkout, which is harmless - a tracing include that matches no file is
+  // skipped, not an error.
   // https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats
   outputFileTracingIncludes: {
     '/api/v1/vision-benchmarks/**': ['./datasets/vision-benchmark/**'],
-    '/vision-benchmark': ['./datasets/vision-benchmark/**'],
+    '/vision-benchmark': [
+      './datasets/vision-benchmark/**',
+      './node_modules/@img/sharp-linux-x64/**',
+      './node_modules/@img/sharp-libvips-linux-x64/**',
+    ],
   },
 };
 

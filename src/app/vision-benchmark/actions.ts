@@ -82,7 +82,68 @@ function readGitCommit(repositoryRoot: string): string {
  * - `keys`       the visitor's own API keys, if they set any on /setup. Used
  *   for this call and never stored; see visitor-keys.ts.
  */
+/**
+ * WHY THERE IS A WRAPPER AROUND THE WHOLE THING.
+ *
+ * Next.js REDACTS an exception thrown out of a server action in production.
+ * The browser gets "A server error occurred" and an opaque digest; the real
+ * message goes only to the platform log. So anything that threw outside the
+ * inner try - resolving the session log, the first record() call, a native
+ * module failing to load, reading the dataset manifest - reached the visitor
+ * as an unactionable number.
+ *
+ * That matters more here than almost anywhere else in this project, because
+ * this action is the ONLY caller of the server-side vision path: the Ollama
+ * run happens in the browser. Every line below is code no other page
+ * exercises, and until now its failures were invisible.
+ *
+ * A benchmark that cannot run is a normal outcome and must be REPORTED, never
+ * thrown. This returns the reason instead.
+ */
 export async function runBuiltInVisionBenchmark(input: {
+  provider: 'gemini' | 'groq';
+  model: string;
+  sessionId?: string | null;
+  keys?: { gemini?: string | null; groq?: string | null };
+}): Promise<RunBuiltInResult> {
+  try {
+    return await executeBuiltInVisionBenchmark(input);
+  } catch (error) {
+    // The name is kept alongside the message: "ENOENT ..." and "PrismaClient
+    // ..." and "Cannot find module 'sharp'" are three different problems that
+    // a bare message can blur together.
+    const detail =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+
+    return {
+      ok: false,
+      error: `The run could not be started on the server. ${detail}`,
+    };
+  }
+}
+
+/**
+ * Recording must never be able to fail a run. The log is a description of
+ * what happened; if the description cannot be written, the thing it describes
+ * still happened and the visitor is still owed their result.
+ */
+function record(
+  log: ReturnType<typeof logForSession>,
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  data: Record<string, unknown>,
+  correlationId: string
+): void {
+  try {
+    log?.record(level, 'benchmark', message, data, correlationId);
+  } catch {
+    /* a log that cannot be written is not a failed benchmark */
+  }
+}
+
+async function executeBuiltInVisionBenchmark(input: {
   provider: 'gemini' | 'groq';
   model: string;
   sessionId?: string | null;
@@ -151,9 +212,9 @@ export async function runBuiltInVisionBenchmark(input: {
     }
   }
 
-  log?.record(
+  record(
+    log,
     'info',
-    'benchmark',
     `Vision benchmark requested for ${tag}`,
     {
       workload_id: VISION_WORKLOAD_ID,
@@ -187,9 +248,9 @@ export async function runBuiltInVisionBenchmark(input: {
 
     // The scores, not the images and not the model's text. Enough to answer
     // "what did I run and what came out" from an exported log alone.
-    log?.record(
+    record(
+      log,
       'info',
-      'benchmark',
       `Vision benchmark ${evidence.passed ? 'passed' : 'failed'} for ${evidence.model}`,
       {
         model: evidence.model,
@@ -224,9 +285,9 @@ export async function runBuiltInVisionBenchmark(input: {
     // runs, and grow without bound. The caller stores it in their own browser.
     return { ok: true, evidence };
   } catch (error) {
-    log?.record(
+    record(
+      log,
       'error',
-      'benchmark',
       `Vision benchmark failed for ${tag}`,
       { model: tag, message: error instanceof Error ? error.message : 'unknown' },
       correlationId
